@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weapon-designer"
+version = "0.1.0"
+description = "Parametric combat robot spinning weapon profile optimizer"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "shapely>=2.0",
+    "ezdxf>=0.18",
+]
+
+[project.optional-dependencies]
+viz = ["matplotlib>=3.7", "Pillow>=9.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+weapon-designer = "weapon_designer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

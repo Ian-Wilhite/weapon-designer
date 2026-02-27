@@ -1,0 +1,41 @@
+{
+  "material": {
+    "name": "AR500",
+    "density_kg_m3": 7850,
+    "yield_strength_mpa": 1400,
+    "hardness_hrc": 50
+  },
+  "weapon_style": "disk",
+  "sheet_thickness_mm": 5,
+  "weight_budget_kg": 1.0,
+  "rpm": 2000,
+  "mounting": {
+    "bore_diameter_mm": 7.4,
+    "bolt_circle_diameter_mm": 16,
+    "num_bolts": 4,
+    "bolt_hole_diameter_mm": 3.5
+  },
+  "envelope": {
+    "max_radius_mm": 100
+  },
+  "optimization": {
+    "weights": {
+      "moment_of_inertia": 0.20,
+      "bite": 0.35,
+      "structural_integrity": 0.25,
+      "mass_utilization": 0.10,
+      "balance": 0.10
+    },
+    "num_fourier_terms": 4,
+    "num_cutout_pairs": 2,
+    "min_feature_size_mm": 3.0,
+    "min_wall_thickness_mm": 5.0,
+    "max_iterations": 100,
+    "population_size": 40
+  },
+  "output": {
+    "dxf_path": "output_disk.dxf",
+    "stats_path": "output_disk_stats.json",
+    "preview": false
+  }
+}

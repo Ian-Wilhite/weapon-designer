@@ -1,0 +1,43 @@
+{
+  "material": {
+    "name": "S7_Tool_Steel",
+    "density_kg_m3": 7750,
+    "yield_strength_mpa": 1600,
+    "hardness_hrc": 56
+  },
+  "weapon_style": "bar",
+  "sheet_thickness_mm": 12,
+  "weight_budget_kg": 4.0,
+  "rpm": 10000,
+  "mounting": {
+    "bore_diameter_mm": 19.05,
+    "bolt_circle_diameter_mm": 40,
+    "num_bolts": 4,
+    "bolt_hole_diameter_mm": 6.0
+  },
+  "envelope": {
+    "max_radius_mm": 200,
+    "max_length_mm": 350,
+    "max_width_mm": 60
+  },
+  "optimization": {
+    "weights": {
+      "moment_of_inertia": 0.40,
+      "bite": 0.15,
+      "structural_integrity": 0.25,
+      "mass_utilization": 0.10,
+      "balance": 0.10
+    },
+    "num_fourier_terms": 3,
+    "num_cutout_pairs": 2,
+    "min_feature_size_mm": 4.0,
+    "min_wall_thickness_mm": 6.0,
+    "max_iterations": 100,
+    "population_size": 40
+  },
+  "output": {
+    "dxf_path": "output_bar.dxf",
+    "stats_path": "output_bar_stats.json",
+    "preview": false
+  }
+}
