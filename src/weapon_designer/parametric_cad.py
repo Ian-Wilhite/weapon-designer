@@ -1,4 +1,8 @@
-"""CAD-style cutout primitives: superellipse weight-reduction pockets.
+"""Backward-compatibility shim — canonical module is cutouts_superellipse.py.
+
+Original docstring preserved below for reference.
+
+CAD-style cutout primitives: superellipse weight-reduction pockets.
 
 Replaces Fourier cutouts  (cx, cy, r_base, c1, s1, c2, s2, …)
 with a 6-parameter engineering primitive:

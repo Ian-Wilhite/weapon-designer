@@ -198,10 +198,39 @@ def _assemble_global(
     return K.tocsr()
 
 
+def _find_boundary_edges(elements: np.ndarray) -> np.ndarray:
+    """Find boundary edges of the triangulated mesh.
+
+    Boundary edges are shared by exactly one triangle.
+
+    Parameters
+    ----------
+    elements : (M, 3) int array of triangle vertex indices
+
+    Returns
+    -------
+    boundary_edges : (B, 2) int array of node-index pairs (sorted per edge)
+    """
+    from collections import Counter
+
+    edge_count: Counter = Counter()
+    for tri in elements:
+        for i, j in ((0, 1), (1, 2), (2, 0)):
+            edge = (int(min(tri[i], tri[j])), int(max(tri[i], tri[j])))
+            edge_count[edge] += 1
+
+    boundary = [list(e) for e, cnt in edge_count.items() if cnt == 1]
+    if boundary:
+        return np.array(boundary, dtype=int)
+    return np.zeros((0, 2), dtype=int)
+
+
 def _apply_contact_forces(
     F: np.ndarray,
     nodes: np.ndarray,
     contact_forces: list[dict],
+    mode: str = "neumann_edge",
+    elements: np.ndarray | None = None,
 ) -> np.ndarray:
     """Add point contact forces to the global force vector F (in-place).
 
@@ -209,19 +238,86 @@ def _apply_contact_forces(
         'x', 'y'   : position of force application (mm)
         'fx', 'fy' : force components (N)
 
-    The force is applied to the nearest mesh node (nearest-node assignment).
+    Parameters
+    ----------
+    mode : "neumann_edge" (default) or "nearest_node"
+        "nearest_node" — legacy KDTree nearest-node injection on all nodes.
+        "neumann_edge" — finds the two nearest boundary nodes, projects the
+        contact point onto the edge between them, and distributes force with
+        linear weight t.  Requires ``elements`` to extract boundary edges.
+        Falls back to "nearest_node" when boundary set is empty.
+    elements : (M, 3) int array, required for "neumann_edge" mode.
     """
     from scipy.spatial import KDTree
 
     if not contact_forces:
         return F
 
-    tree = KDTree(nodes)
+    if mode == "nearest_node":
+        tree = KDTree(nodes)
+        for cf in contact_forces:
+            pt = np.array([cf["x"], cf["y"]])
+            _, idx = tree.query(pt)
+            F[2 * idx] += cf["fx"]
+            F[2 * idx + 1] += cf["fy"]
+        return F
+
+    # --- Neumann-edge mode ---
+    boundary_edges = np.zeros((0, 2), dtype=int)
+    if elements is not None and len(elements) > 0:
+        boundary_edges = _find_boundary_edges(elements)
+
+    if len(boundary_edges) == 0:
+        # Fallback: nearest node on all nodes
+        tree = KDTree(nodes)
+        for cf in contact_forces:
+            pt = np.array([cf["x"], cf["y"]])
+            _, idx = tree.query(pt)
+            F[2 * idx] += cf["fx"]
+            F[2 * idx + 1] += cf["fy"]
+        return F
+
+    # Build KDTree on boundary node positions only
+    boundary_node_set = np.unique(boundary_edges.ravel())
+    boundary_positions = nodes[boundary_node_set]
+    tree = KDTree(boundary_positions)
+
     for cf in contact_forces:
         pt = np.array([cf["x"], cf["y"]])
-        _, idx = tree.query(pt)
-        F[2 * idx] += cf["fx"]
-        F[2 * idx + 1] += cf["fy"]
+        fx, fy = cf["fx"], cf["fy"]
+
+        k = min(2, len(boundary_node_set))
+        _, local_indices = tree.query(pt, k=k)
+        local_indices = np.atleast_1d(local_indices)
+
+        ni = boundary_node_set[local_indices[0]]
+        if k < 2 or local_indices[0] == local_indices[-1]:
+            # Only one distinct node found
+            F[2 * ni] += fx
+            F[2 * ni + 1] += fy
+            continue
+
+        nj = boundary_node_set[local_indices[1]]
+        if ni == nj:
+            F[2 * ni] += fx
+            F[2 * ni + 1] += fy
+            continue
+
+        # Project pt onto segment ni→nj, weight t ∈ [0, 1]
+        pi = nodes[ni]
+        pj = nodes[nj]
+        seg = pj - pi
+        seg_len_sq = float(np.dot(seg, seg))
+        if seg_len_sq < 1e-12:
+            F[2 * ni] += fx
+            F[2 * ni + 1] += fy
+            continue
+
+        t = float(np.clip(np.dot(pt - pi, seg) / seg_len_sq, 0.0, 1.0))
+        F[2 * ni] += (1.0 - t) * fx
+        F[2 * ni + 1] += (1.0 - t) * fy
+        F[2 * nj] += t * fx
+        F[2 * nj + 1] += t * fy
 
     return F
 
@@ -378,6 +474,8 @@ def fea_stress_analysis(
     youngs_modulus_mpa: float = 200_000.0,
     poissons_ratio: float = 0.3,
     mesh_spacing: float = 5.0,
+    contact_forces: list[dict] | None = None,
+    contact_load_mode: str = "neumann_edge",
 ) -> dict:
     """Run 2D plane-stress FEA under centrifugal loading.
 
@@ -392,6 +490,11 @@ def fea_stress_analysis(
     youngs_modulus_mpa : Young's modulus (default: steel ~200 GPa)
     poissons_ratio : Poisson's ratio (default: 0.3 for steel)
     mesh_spacing : approximate element edge length in mm
+    contact_forces : optional list of spiral-impact point forces (dicts with
+        'x', 'y', 'fx', 'fy') superimposed on centrifugal body load.
+        Produce with ``spiral_contact.contact_forces()``.
+    contact_load_mode : "neumann_edge" (default) or "nearest_node".
+        Controls how contact forces are distributed to mesh nodes.
 
     Returns
     -------
@@ -431,6 +534,11 @@ def fea_stress_analysis(
 
     # Centrifugal load vector
     F = _centrifugal_load(nodes, elements, omega, density_tonne_mm3, thickness_mm)
+
+    # Superimpose spiral-impact contact forces (optional)
+    if contact_forces:
+        F = _apply_contact_forces(F, nodes, contact_forces,
+                                  mode=contact_load_mode, elements=elements)
 
     # Boundary conditions
     bore_radius = bore_diameter_mm / 2.0
@@ -510,6 +618,7 @@ def fea_stress_analysis_with_mesh(
     poissons_ratio: float = 0.3,
     mesh_spacing: float = 5.0,
     contact_forces: list[dict] | None = None,
+    contact_load_mode: str = "neumann_edge",
 ) -> dict:
     """Like fea_stress_analysis() but also returns the mesh and per-element stresses.
 
@@ -549,7 +658,8 @@ def fea_stress_analysis_with_mesh(
     K = _assemble_global(nodes, elements, E, nu, thickness_mm)
     F = _centrifugal_load(nodes, elements, omega, density_tonne_mm3, thickness_mm)
     if contact_forces:
-        F = _apply_contact_forces(F, nodes, contact_forces)
+        F = _apply_contact_forces(F, nodes, contact_forces,
+                                  mode=contact_load_mode, elements=elements)
     bore_radius = bore_diameter_mm / 2.0
     K, F, free_dofs = _apply_boundary_conditions(K, F, nodes, bore_radius)
 
@@ -593,3 +703,99 @@ def fea_stress_analysis_with_mesh(
         "elements": elements,
         "vm_stresses": vm_stresses,
     }
+
+
+def fea_stress_envelope(
+    poly: Polygon | MultiPolygon,
+    cfg,
+    n_patches: int = 12,
+) -> dict:
+    """Apply n_patches inward radial unit forces simultaneously (single FEA solve).
+
+    Forces are superimposed into one load vector via Neumann-edge distribution,
+    then a single solve yields the combined stress field.  KS aggregation (ρ=20)
+    produces a smooth envelope stress.
+
+    **Post-analysis only** — not intended for use inside the optimizer loop.
+
+    Parameters
+    ----------
+    poly      : weapon polygon (mm units)
+    cfg       : WeaponConfig — provides mesh spacing and mounting bore
+    n_patches : number of equally-spaced inward radial force patches
+
+    Returns
+    -------
+    dict with keys:
+        peak_stress_mpa : maximum von Mises stress under envelope loading
+        ks_stress_mpa   : KS-aggregated stress (ρ=20, smooth envelope)
+        n_patches       : number of patches applied
+    """
+    spacing = getattr(cfg.optimization, "fea_coarse_spacing_mm", 10.0)
+    max_area = spacing ** 2
+    nodes, elements = _triangulate_polygon(poly, max_area=max_area)
+
+    if len(elements) < 3:
+        return {"peak_stress_mpa": 0.0, "ks_stress_mpa": 0.0, "n_patches": n_patches}
+
+    E = 200_000.0   # standard steel Young's modulus (MPa)
+    nu = 0.3
+    thickness = cfg.sheet_thickness_mm
+
+    K = _assemble_global(nodes, elements, E, nu, thickness)
+    F = np.zeros(2 * len(nodes))
+
+    # Superimpose n_patches unit inward radial forces via Neumann-edge loading
+    if isinstance(poly, MultiPolygon):
+        cx = float(poly.centroid.x)
+        cy = float(poly.centroid.y)
+    else:
+        cx = float(poly.centroid.x)
+        cy = float(poly.centroid.y)
+
+    max_r = float(np.hypot(nodes[:, 0] - cx, nodes[:, 1] - cy).max())
+    angles = np.linspace(0.0, 2.0 * np.pi, n_patches, endpoint=False)
+
+    for angle in angles:
+        # Place force point at max_r * 0.95 toward the boundary
+        px = cx + max_r * 0.95 * np.cos(angle)
+        py = cy + max_r * 0.95 * np.sin(angle)
+        # Inward radial direction (unit force)
+        fx = -float(np.cos(angle))
+        fy = -float(np.sin(angle))
+        patch = [{"x": px, "y": py, "fx": fx, "fy": fy}]
+        F = _apply_contact_forces(F, nodes, patch,
+                                  mode="neumann_edge", elements=elements)
+
+    bore_radius = cfg.mounting.bore_diameter_mm / 2.0
+    K, F, free_dofs = _apply_boundary_conditions(K, F, nodes, bore_radius)
+
+    n_dof = 2 * len(nodes)
+    u = np.zeros(n_dof)
+    if len(free_dofs) > 0:
+        K_free = K[np.ix_(free_dofs, free_dofs)]
+        F_free = F[free_dofs]
+        try:
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                u_free = spsolve(K_free, F_free)
+            if np.isfinite(u_free).all():
+                u[free_dofs] = u_free
+        except Exception:
+            pass
+
+    vm = _compute_von_mises(nodes, elements, u, E, nu)
+    peak = float(vm.max()) if len(vm) > 0 else 0.0
+
+    # KS aggregation with ρ=20 (matches objectives_smooth.py)
+    rho = 20.0
+    if len(vm) > 0 and vm.max() > 1e-6:
+        vm_max = vm.max()
+        ks_val = float(vm_max + (1.0 / rho) * np.log(
+            np.sum(np.exp(np.clip(rho * (vm - vm_max), -500, 0)))
+        ))
+    else:
+        ks_val = 0.0
+
+    return {"peak_stress_mpa": peak, "ks_stress_mpa": ks_val, "n_patches": n_patches}

@@ -63,67 +63,7 @@ CASES["featherweight_disk"] = WeaponConfig(
     ),
 )
 
-# Case 3: Heavyweight bar spinner (Tombstone style)
-CASES["heavyweight_bar"] = WeaponConfig(
-    material=Material(name="S7_Tool_Steel", density_kg_m3=7750, yield_strength_mpa=1600, hardness_hrc=56),
-    weapon_style="bar",
-    sheet_thickness_mm=12,
-    weight_budget_kg=5.0,
-    rpm=10000,
-    mounting=Mounting(bore_diameter_mm=19.05, bolt_circle_diameter_mm=40, num_bolts=4, bolt_hole_diameter_mm=6.0),
-    envelope=Envelope(max_radius_mm=200, max_length_mm=400, max_width_mm=70),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.35, bite=0.10, structural_integrity=0.20, mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-        num_fourier_terms=4, num_cutout_pairs=2, max_iterations=200, population_size=60,
-    ),
-)
-
-# Case 4: Compact bar spinner
-CASES["compact_bar"] = WeaponConfig(
-    material=Material(name="AR500", density_kg_m3=7850, yield_strength_mpa=1400, hardness_hrc=50),
-    weapon_style="bar",
-    sheet_thickness_mm=10,
-    weight_budget_kg=3.0,
-    rpm=9000,
-    mounting=Mounting(bore_diameter_mm=15.0, bolt_circle_diameter_mm=30, num_bolts=4, bolt_hole_diameter_mm=5.0),
-    envelope=Envelope(max_radius_mm=150, max_length_mm=280, max_width_mm=55),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.30, bite=0.15, structural_integrity=0.20, mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-        num_fourier_terms=3, num_cutout_pairs=2, max_iterations=200, population_size=60,
-    ),
-)
-
-# Case 5: 3-blade eggbeater (high bite rate)
-CASES["eggbeater_3blade"] = WeaponConfig(
-    material=Material(name="AR500", density_kg_m3=7850, yield_strength_mpa=1400, hardness_hrc=50),
-    weapon_style="eggbeater",
-    sheet_thickness_mm=8,
-    weight_budget_kg=3.5,
-    rpm=12000,
-    mounting=Mounting(bore_diameter_mm=20.0, bolt_circle_diameter_mm=38, num_bolts=3, bolt_hole_diameter_mm=5.5),
-    envelope=Envelope(max_radius_mm=130),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.25, bite=0.20, structural_integrity=0.20, mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-        num_fourier_terms=4, num_cutout_pairs=2, max_iterations=200, population_size=60,
-    ),
-)
-
-# Case 6: 2-blade eggbeater (max energy per hit)
-CASES["eggbeater_2blade"] = WeaponConfig(
-    material=Material(name="S7_Tool_Steel", density_kg_m3=7750, yield_strength_mpa=1600, hardness_hrc=56),
-    weapon_style="eggbeater",
-    sheet_thickness_mm=10,
-    weight_budget_kg=4.0,
-    rpm=10000,
-    mounting=Mounting(bore_diameter_mm=22.0, bolt_circle_diameter_mm=45, num_bolts=4, bolt_hole_diameter_mm=6.0),
-    envelope=Envelope(max_radius_mm=140),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.30, bite=0.15, structural_integrity=0.20, mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-        num_fourier_terms=4, num_cutout_pairs=2, max_iterations=200, population_size=60,
-    ),
-)
-
-# Case 7: Max-energy disk (MOI-focused)
+# Case 3: Max-energy disk (MOI-focused)
 CASES["max_energy_disk"] = WeaponConfig(
     material=Material(name="AR500", density_kg_m3=7850, yield_strength_mpa=1400, hardness_hrc=50),
     weapon_style="disk",
@@ -138,50 +78,6 @@ CASES["max_energy_disk"] = WeaponConfig(
     ),
 )
 
-# Case 8: High-RPM small disk (drum-style)
-CASES["drum_disk"] = WeaponConfig(
-    material=Material(name="AR500", density_kg_m3=7850, yield_strength_mpa=1400, hardness_hrc=50),
-    weapon_style="disk",
-    sheet_thickness_mm=8,
-    weight_budget_kg=2.0,
-    rpm=15000,
-    mounting=Mounting(bore_diameter_mm=10.0, bolt_circle_diameter_mm=20, num_bolts=3, bolt_hole_diameter_mm=3.5),
-    envelope=Envelope(max_radius_mm=60),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.25, bite=0.20, structural_integrity=0.25, mass_utilization=0.10, balance=0.05, impact_zone=0.15),
-        num_fourier_terms=3, num_cutout_pairs=1, max_iterations=200, population_size=60,
-    ),
-)
-
-# Case 9: Wide bar (undercutter style)
-CASES["undercutter_bar"] = WeaponConfig(
-    material=Material(name="AR500", density_kg_m3=7850, yield_strength_mpa=1400, hardness_hrc=50),
-    weapon_style="bar",
-    sheet_thickness_mm=8,
-    weight_budget_kg=4.0,
-    rpm=8000,
-    mounting=Mounting(bore_diameter_mm=20.0, bolt_circle_diameter_mm=40, num_bolts=4, bolt_hole_diameter_mm=6.0),
-    envelope=Envelope(max_radius_mm=180, max_length_mm=350, max_width_mm=90),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.30, bite=0.15, structural_integrity=0.20, mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-        num_fourier_terms=4, num_cutout_pairs=2, max_iterations=200, population_size=60,
-    ),
-)
-
-# Case 10: 4-blade eggbeater (maximum bite)
-CASES["eggbeater_4blade"] = WeaponConfig(
-    material=Material(name="AR500", density_kg_m3=7850, yield_strength_mpa=1400, hardness_hrc=50),
-    weapon_style="eggbeater",
-    sheet_thickness_mm=6,
-    weight_budget_kg=2.5,
-    rpm=14000,
-    mounting=Mounting(bore_diameter_mm=15.0, bolt_circle_diameter_mm=30, num_bolts=4, bolt_hole_diameter_mm=4.0),
-    envelope=Envelope(max_radius_mm=100),
-    optimization=OptimizationParams(
-        weights=OptimizationWeights(moment_of_inertia=0.20, bite=0.25, structural_integrity=0.20, mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-        num_fourier_terms=4, num_cutout_pairs=2, max_iterations=200, population_size=60,
-    ),
-)
 
 
 # ---------------------------------------------------------------------------
@@ -643,11 +539,12 @@ def main():
                         help="Quick mode: reduced iterations for testing (~5 min total)")
     parser.add_argument(
         "--mode", type=str, default="baseline",
-        choices=["baseline", "enhanced", "compare"],
+        choices=["baseline", "enhanced", "compare", "functional"],
         help=(
-            "baseline = original pipeline only (default); "
-            "enhanced = improved pipeline only (FEA-in-loop, superellipse cutouts, GIF export); "
-            "compare  = run both and print side-by-side table"
+            "baseline    = original pipeline only (default); "
+            "enhanced    = improved pipeline only (FEA-in-loop, superellipse cutouts, GIF export); "
+            "compare     = run both and print side-by-side table; "
+            "functional  = low-dimensional functional optimizer (Stage A + B)"
         ),
     )
     args = parser.parse_args()
@@ -672,8 +569,9 @@ def main():
             cfg.optimization.population_size = 15
             cfg.optimization.fea_interval = 3   # still produce a few frames
 
-    run_baseline = args.mode in ("baseline", "compare")
-    run_enhanced = args.mode in ("enhanced", "compare")
+    run_baseline   = args.mode in ("baseline", "compare")
+    run_enhanced   = args.mode in ("enhanced", "compare")
+    run_functional = args.mode == "functional"
 
     # Open log file
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -733,6 +631,51 @@ def main():
                            "status": "failed", "error": str(e)}
                 eresult["elapsed_s"] = round(time.time() - case_start, 1)
             enhanced_results.append(eresult)
+
+        # ── Functional ───────────────────────────────────────────────────
+        if run_functional:
+            from weapon_designer.optimizer_functional import optimize_functional
+            from weapon_designer.exporter import export_dxf
+            import copy
+            case_start = time.time()
+            try:
+                fcfg = copy.deepcopy(cfg)
+                fcfg.optimization.evaluation_mode = "enhanced"
+                func_case_dir = output_dir / (name + "_functional")
+                func_case_dir.mkdir(parents=True, exist_ok=True)
+
+                def _flog(msg):
+                    ts = datetime.now().strftime("%H:%M:%S")
+                    line = f"[{ts}] [{name}+func] {msg}"
+                    print(line); log_file.write(line + "\n"); log_file.flush()
+
+                fresult = optimize_functional(fcfg, func_case_dir, stage_b=True, log_fn=_flog)
+                dxf_path = str(func_case_dir / f"{name}_functional.dxf")
+                export_dxf(fresult["weapon_polygon"], dxf_path, fcfg)
+
+                stats = {
+                    "case_name":         name + "_functional",
+                    "weapon_style":      cfg.weapon_style,
+                    "evaluation_mode":   "functional",
+                    "final_score":       round(fresult["score"], 6),
+                    "constraint_penalty": round(fresult["penalty"], 6),
+                    "metrics":           {k: round(v, 6) if isinstance(v, float) else v
+                                          for k, v in fresult["metrics"].items()
+                                          if not k.startswith("_")},
+                    "functional_params": fresult["functional_params"].tolist(),
+                    "convergence_stage_a": fresult["convergence_stage_a"],
+                    "convergence_stage_b": fresult["convergence_stage_b"],
+                    "elapsed_s":         round(fresult["elapsed_s"], 1),
+                    "status":            "success",
+                }
+                stats_path = func_case_dir / f"{name}_functional_stats.json"
+                with open(stats_path, "w") as sf:
+                    json.dump(stats, sf, indent=2)
+                _flog(f"Functional done: score={fresult['score']:.4f}  DXF={dxf_path}")
+            except Exception as e:
+                _log(f"FUNCTIONAL FAILED: {e}")
+                import traceback
+                _log(traceback.format_exc())
 
         elapsed_total = time.time() - total_start
         remaining = len(cases) - i

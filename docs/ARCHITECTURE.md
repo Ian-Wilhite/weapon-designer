@@ -57,6 +57,7 @@ ignored when `cutout_type = "topology"`.
 |-----|--------|-----------|-----------|
 | `baseline` | `objectives.py` | Formula constant per style/RPM; geometry cannot influence it | Geometric proxy (wall thickness, section width) |
 | `enhanced` | `objectives_enhanced.py` | Kinematic Archimedean spiral simulation; n_contacts × r_profile crossings per revolution | Coarse FEA safety factor in-loop |
+| `physical` | `objectives_physical.py` | Same spiral bite; score = E_transfer/E_ref ∈ [0,1]; no soft weights | Hard constraints: SF≥1.5, mass≤budget, CoM≤3%R; returns 0 on violation |
 
 Bite scoring difference:
 
@@ -112,6 +113,33 @@ it does not affect the optimizer loop.
 
 Topology mode ignores `num_cutout_pairs`, `phase2_iters`, and all polar-cutout
 bounds.  Its iteration budget is controlled by `topo_n_iter` instead.
+
+---
+
+## ROM / Surrogate Track (Track 3)
+
+Separate from the optimizer loop; builds a POD/GP surrogate for FEA speed-up.
+
+| Script | Purpose | Key output |
+|--------|---------|-----------|
+| `scripts/build_fea_database.py` | Sobol sampling → N FEA calls → reference-mesh stress fields | `fea_database/{design_NNNN.npz, ref_mesh.npz, manifest.json}` |
+| `scripts/build_rom.py` | SVD/POD → k GP regressors | `fea_database/fea_surrogate.pkl` |
+| `scripts/validate_rom.py` | LOO CV, calibration, 1D slices | `fea_database/validation_summary.json` |
+| `src/weapon_designer/surrogate_fea.py` | `FEASurrogate` class: fit/predict/save/load | — |
+| `src/weapon_designer/optimizer_surrogate.py` | UCB active-learning optimizer | `surrogate_stats.json` |
+
+**Empirical results (N=500, d=8 B-spline params, M=1173 reference elements):**
+
+| Threshold | k modes | Fit time | Peak stress LOO err | Calib R² |
+|-----------|---------|---------|---------------------|----------|
+| 95%       | 63      | 20 min  | 17.9%               | −0.66    |
+| 99%       | 187     | 54 min  | 14.5%               | −2.33    |
+
+Modes beyond k≈63 have near-zero singular values (numerical noise).
+**Recommended**: 90% threshold (k≈30) for active-learning production use.
+All scores in the N=500 Sobol database are 1.0 (thin-ring shapes saturate E_score);
+the physical score has zero variance at random parameter samples. To expose score
+variance for active learning, seed with constraint-boundary designs (low SF, mass near limit).
 
 ---
 
@@ -349,3 +377,125 @@ unit tangent to the Archimedean spiral path at the contact point —
 `dP/dθ = (−v_per_rad·cos θ − r·sin θ,  −v_per_rad·sin θ + r·cos θ)` normalised.
 This represents the velocity of the opponent in the weapon's rotating frame;
 by Newton's 3rd law the weapon experiences a force in this direction.
+
+
+# Mermaid plot (architecture summary for report)
+
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 40, 'rankSpacing': 45}} }%%
+flowchart TB
+  %% ===== Styles =====
+  classDef cfg fill:#E65100,color:#fff,stroke:#BF360C,stroke-width:2px
+  classDef core fill:#37474F,color:#fff,stroke:#263238,stroke-width:2px
+  classDef swap fill:#1565C0,color:#fff,stroke:#0D47A1,stroke-width:2px
+  classDef dispatch fill:#6A1B9A,color:#fff,stroke:#4A148C,stroke-width:2px
+  classDef out fill:#00695C,color:#fff,stroke:#004D40,stroke-width:2px
+
+  %% ===== Layer 0: Inputs =====
+  subgraph L0["INPUTS"]
+    direction LR
+    CONFIG(["System Configuration
+    material / mounts / profile"]):::cfg
+    OPT_PARAM(["Optimization Parameters"])
+    SEED(["Initial Seeding"]):::core
+  end
+
+  %% ===== Layer 1: Optimization =====
+  subgraph L1["OPTIMIZATION ENGINE"]
+    direction LR
+    OPTMODE(["Optimization Mode Selector
+    baseline vs enhanced"]):::dispatch
+    POP(["Population State
+    candidate parameter vectors"]):::core
+    GEN(["Candidate Generator
+    mutation · crossover"]):::core
+    EVALCALL(("Evaluate Candidate")):::dispatch
+    SEL(["Selection Strategy
+    accept / reject / replace"]):::core
+
+    OPTMODE --> POP --> GEN --> EVALCALL --> SEL --> POP
+  end
+
+  %% ===== Layer 2: Modeling =====
+  subgraph L2["MODELING LAYER"]
+    direction LR
+
+    %% --- Geometry ---
+    subgraph GEO["GEOMETRY GENERATION"]
+      direction TB
+      PROFILE(["Outer Shape Generation
+      profile family selection"]):::dispatch
+      INTERIOR(["Interior Structure Generation"]):::dispatch
+      ASSEMBLY(["Geometry Assembly"]):::core
+      CONDITION(["Manufacturing Conditioning"]):::swap
+      VALIDATE(["Geometry Validation"]):::core
+
+      PROFILE --> ASSEMBLY
+      INTERIOR --> ASSEMBLY
+      ASSEMBLY --> CONDITION --> VALIDATE
+    end
+
+    %% --- Physics ---
+    subgraph PHY["PHYSICAL MODELING"]
+      direction TB
+      PROPS(["Physical Properties"]):::core
+      CONTACT(["Contact Interaction Model"]):::core
+      SCHED(["Evaluation Scheduler"]):::dispatch
+      FEA(["Structural Analysis"]):::core
+
+      PROPS --> SCHED
+      CONTACT --> SCHED
+      SCHED -->|promoted candidates| FEA
+    end
+  end
+
+  %% ===== Layer 3: Scoring =====
+  subgraph L3["PERFORMANCE SCORING"]
+    direction LR
+    NORMALIZE(["Metric Normalization"]):::swap
+    OBJECTIVE(["Objective Evaluation"]):::dispatch
+    AGGREGATE(["Score Aggregation"]):::core
+
+    NORMALIZE --> OBJECTIVE --> AGGREGATE
+  end
+
+  %% ===== Layer 4: Outputs =====
+  subgraph L4["OUTPUTS + DIAGNOSTICS"]
+    direction LR
+    DIAG(["Optimization Diagnostics
+    metrics · shape change · reject reasons"]):::out
+    EXPORT(["Design Export
+    CAD geometry + statistics"]):::out
+    VIS(["Visualization
+    geometry previews + convergence plots"]):::out
+    ANIM(["Simulation Visualization
+    stress fields + contact animations"]):::out
+  end
+
+  %% ===== Cross-layer wiring =====
+  CONFIG --> OPTMODE
+  SEED --> POP
+
+  EVALCALL -->|candidate parameters| PROFILE
+  EVALCALL -->|candidate parameters| INTERIOR
+
+  VALIDATE -->|valid geometry| PROPS
+  VALIDATE -->|valid geometry| CONTACT
+
+  PROPS -->|metrics| NORMALIZE
+  CONTACT -->|metrics| NORMALIZE
+  FEA -->|stress metrics| NORMALIZE
+
+  AGGREGATE -->|score feedback| EVALCALL
+
+  %% ===== Diagnostics =====
+  PROPS --> DIAG
+  CONTACT --> DIAG
+  FEA --> DIAG
+  AGGREGATE --> DIAG
+
+  DIAG --> EXPORT
+  DIAG --> VIS
+  FEA --> ANIM
+  ANIM --> VIS
+```

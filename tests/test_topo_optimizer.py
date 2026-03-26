@@ -57,7 +57,6 @@ def topo_cfg():
             topo_r_min_factor=2.0,
             topo_w_compliance=0.5,
             topo_frame_interval=0,      # disable GIF output in tests
-            topo_fix_rim=True,
         ),
     )
 
@@ -105,7 +104,7 @@ class TestTopoMeshParams:
         assert hasattr(opt, "topo_p_simp")
         assert hasattr(opt, "topo_r_min_factor")
         assert hasattr(opt, "topo_w_compliance")
-        assert hasattr(opt, "topo_fix_rim")
+        assert hasattr(opt, "topo_edge_offset_mm")
 
 
 # ---------------------------------------------------------------------------

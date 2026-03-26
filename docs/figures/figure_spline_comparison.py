@@ -44,6 +44,7 @@ COLORS = {
     "bezier":     "#FF5722",   # orange-red
     "catmull_rom":"#4CAF50",   # green
     "fourier":    "#9C27B0",   # purple
+    "pwlinear":   "#795548",   # brown — piecewise-linear C⁰
     "ctrl_pts":   "#333333",
     "ctrl_poly":  "#AAAAAA",
     "perturbed":  "#E91E63",   # pink — perturbed control point
@@ -55,6 +56,7 @@ LABELS = {
     "bezier":     "Composite Bézier (C¹)",
     "catmull_rom":"Catmull-Rom (C¹, interpolating)",
     "fourier":    "Fourier Series",
+    "pwlinear":   "Piecewise-Linear (C⁰)",
 }
 
 BG     = "white"
@@ -194,11 +196,34 @@ def _annotate_interpolation(ax, radii, poly, color, only_mismatch=True):
 R_MAX = 85.0
 R_MIN = 5.0
 
+
+def _build_pwlinear(radii, n_eval=360):
+    """Piecewise-linear profile: straight chords between N radial knots."""
+    from scipy.interpolate import interp1d
+    N = len(radii)
+    r = np.clip(radii, R_MIN, R_MAX)
+    theta_ctrl = np.linspace(0, 2 * np.pi, N, endpoint=False)
+    theta_eval = np.linspace(0, 2 * np.pi, n_eval, endpoint=False)
+    theta_w = np.concatenate([theta_ctrl - 2*np.pi, theta_ctrl, theta_ctrl + 2*np.pi])
+    radii_w = np.tile(r, 3)
+    f = interp1d(theta_w, radii_w, kind="linear")
+    r_eval = f(theta_eval)
+    x = r_eval * np.cos(theta_eval)
+    y = r_eval * np.sin(theta_eval)
+    coords = list(zip(x, y)); coords.append(coords[0])
+    from shapely.geometry import Polygon
+    poly = Polygon(coords)
+    if not poly.is_valid:
+        poly = poly.buffer(0)
+    return poly if (not poly.is_empty and poly.area > 1.0) else None
+
+
 def _build_all(radii):
     poly_bs = build_bspline_profile(radii, R_MAX, R_MIN, n_eval=360)
     poly_bz = build_bezier_profile(radii, R_MAX, R_MIN, n_eval=360)
     poly_cr = build_catmull_rom_profile(radii, R_MAX, R_MIN, n_eval=360)
-    return poly_bs, poly_bz, poly_cr
+    poly_pw = _build_pwlinear(radii, n_eval=360)
+    return poly_bs, poly_bz, poly_cr, poly_pw
 
 
 # ---------------------------------------------------------------------------
@@ -228,10 +253,10 @@ radii_C_pert[PERTURB_IDX] += 30
 # Build profiles
 # ---------------------------------------------------------------------------
 
-bs_A, bz_A, cr_A = _build_all(radii_A)
-bs_B, bz_B, cr_B = _build_all(radii_B)
-bs_C, bz_C, cr_C = _build_all(radii_C)
-bs_Cp, bz_Cp, cr_Cp = _build_all(radii_C_pert)
+bs_A, bz_A, cr_A, pw_A = _build_all(radii_A)
+bs_B, bz_B, cr_B, pw_B = _build_all(radii_B)
+bs_C, bz_C, cr_C, pw_C = _build_all(radii_C)
+bs_Cp, bz_Cp, cr_Cp, pw_Cp = _build_all(radii_C_pert)
 
 fx_A_lo, fy_A_lo = build_fourier_profile_xy(radii_A, n_terms=3,  n_eval=360)
 fx_A_hi, fy_A_hi = build_fourier_profile_xy(radii_A, n_terms=N//2, n_eval=360)
@@ -243,20 +268,19 @@ fx_B,    fy_B    = build_fourier_profile_xy(radii_B, n_terms=4,  n_eval=360)
 # ---------------------------------------------------------------------------
 #
 #   Row 0 — "Portrait" panels: one per method on Config A (sharp alternating)
-#   ┌──────────────┬──────────────┬──────────────┬──────────────┐
-#   │  B-Spline    │   Bézier     │  Catmull-Rom │   Fourier    │
-#   │   (C², approx)│  (C¹, approx)│ (C¹, interp) │  (global)    │
-#   └──────────────┴──────────────┴──────────────┴──────────────┘
+#   ┌──────────┬──────────┬──────────┬──────────┬──────────┐
+#   │ B-Spline │  Bézier  │ Catmull  │ Fourier  │ PW-Lin.  │
+#   │  (C²)    │  (C¹)    │ (C¹,int) │ (global) │  (C⁰)    │
+#   └──────────┴──────────┴──────────┴──────────┴──────────┘
 #
-#   Row 1 — "Overlay" panel: all 3 splines on Config B (3-lobe shape)
-#   ┌───────────────────────┬─────────────────────────────────────┐
-#   │  Overlay comparison   │  Local-support perturbation demo    │
-#   │  (Config B, 3-lobe)   │  (Config C: move one ctrl pt)       │
-#   └───────────────────────┴─────────────────────────────────────┘
+#   Row 1 — wider panels spanning cols 0-2 and cols 2-4
+#   ┌─────────────────────────┬────────────────────────────┐
+#   │  Overlay (Config B)     │  Local-support demo (C)    │
+#   └─────────────────────────┴────────────────────────────┘
 
-fig = plt.figure(figsize=(15, 9.5), facecolor=BG)
+fig = plt.figure(figsize=(18.5, 9.5), facecolor=BG)
 gs = gridspec.GridSpec(
-    2, 4,
+    2, 5,
     figure=fig,
     hspace=0.38, wspace=0.18,
     left=0.03, right=0.97, top=0.93, bottom=0.06,
@@ -268,6 +292,7 @@ ax_bs = fig.add_subplot(gs[0, 0])
 ax_bz = fig.add_subplot(gs[0, 1])
 ax_cr = fig.add_subplot(gs[0, 2])
 ax_fo = fig.add_subplot(gs[0, 3])
+ax_pw = fig.add_subplot(gs[0, 4])
 
 for ax, poly, color, key in [
     (ax_bs, bs_A, COLORS["bspline"],     "bspline"),
@@ -288,19 +313,28 @@ ax_fo.plot(fx_A_hi, fy_A_hi, color=COLORS["fourier"], lw=1.4,
            ls="--", alpha=0.65, label=f"k≤{N//2} ({N//2*2+1} params)", zorder=3)
 ax_fo.legend(fontsize=7, loc="lower right", framealpha=0.8)
 
+# Piecewise-linear panel
+_style_ax(ax_pw, title=LABELS["pwlinear"])
+_draw_ctrl(ax_pw, radii_A)
+_draw_profile(ax_pw, pw_A, COLORS["pwlinear"], lw=2.2, fill=True)
+# Annotate kinks at every control point
+cx_pw, cy_pw = ctrl_xy(radii_A)
+ax_pw.scatter(cx_pw, cy_pw, s=45, color=COLORS["pwlinear"],
+              zorder=6, edgecolors="white", linewidths=0.6, marker="D",
+              label="kink at each ctrl pt")
+ax_pw.legend(fontsize=7, loc="lower right", framealpha=0.8)
+
 # Subtitle annotations
-ax_bs.text(0.5, -0.04, "C² — smooth, does not pass through control pts",
-           transform=ax_bs.transAxes, ha="center", va="top",
-           fontsize=7.5, color="#555555", style="italic")
-ax_bz.text(0.5, -0.04, "C¹ — tangent-continuous, does not interpolate",
-           transform=ax_bz.transAxes, ha="center", va="top",
-           fontsize=7.5, color="#555555", style="italic")
-ax_cr.text(0.5, -0.04, "C¹ — centripetal (α=0.5), interpolates each control pt",
-           transform=ax_cr.transAxes, ha="center", va="top",
-           fontsize=7.5, color="#555555", style="italic")
-ax_fo.text(0.5, -0.04, "Global support — all harmonics affected by any feature",
-           transform=ax_fo.transAxes, ha="center", va="top",
-           fontsize=7.5, color="#555555", style="italic")
+_SUBS = {
+    ax_bs: "C² — smooth, does not pass through control pts",
+    ax_bz: "C¹ — tangent-continuous, does not interpolate",
+    ax_cr: "C¹ — centripetal (α=0.5), interpolates each control pt",
+    ax_fo: "Global support — all harmonics affected by any feature",
+    ax_pw: "C⁰ — maximum locality, kink at every control point",
+}
+for ax, sub in _SUBS.items():
+    ax.text(0.5, -0.04, sub, transform=ax.transAxes,
+            ha="center", va="top", fontsize=7.0, color="#555555", style="italic")
 
 # Highlight: interpolation arrows for CR (green arrow = 0 gap)
 ax_cr.text(0.02, 0.97, "✓ curve passes\nthrough each\ncontrol point",
@@ -328,10 +362,10 @@ ax_bs.text(0.02, 0.97, "≠ curve does not\npass through\ncontrol points",
                      edgecolor="#BBBBBB", alpha=0.85))
 
 
-# ── Row 1 left (cols 0-1): Overlay on Config B ───────────────────────────
+# ── Row 1 left (cols 0-2): Overlay on Config B ───────────────────────────
 
-ax_ov = fig.add_subplot(gs[1, 0:2])
-_style_ax(ax_ov, title="Overlay — same control points, all three spline families\n"
+ax_ov = fig.add_subplot(gs[1, 0:3])
+_style_ax(ax_ov, title="Overlay — same control points, all five profile families\n"
           "(3-lobe weapon shape, N=10 control radii)", r_max=90)
 
 _draw_ctrl(ax_ov, radii_B, color=COLORS["ctrl_pts"])
@@ -340,8 +374,12 @@ for poly, color, key in [
     (bs_B, COLORS["bspline"],     "bspline"),
     (bz_B, COLORS["bezier"],      "bezier"),
     (cr_B, COLORS["catmull_rom"], "catmull_rom"),
+    (pw_B, COLORS["pwlinear"],    "pwlinear"),
 ]:
     _draw_profile(ax_ov, poly, color, lw=2.2, label=LABELS[key])
+
+# Fourier overlay on Config B
+ax_ov.plot(fx_B, fy_B, color=COLORS["fourier"], lw=2.2, label=LABELS["fourier"], zorder=3)
 
 # Mark where CR actually hits control points
 cx_B, cy_B = ctrl_xy(radii_B)
@@ -357,14 +395,14 @@ if cr_B:
 
 legend_handles = [
     Line2D([0], [0], color=COLORS[k], lw=2.2, label=LABELS[k])
-    for k in ("bspline", "bezier", "catmull_rom")
+    for k in ("bspline", "bezier", "catmull_rom", "fourier", "pwlinear")
 ] + [
     Line2D([0], [0], marker="o", color="w", markerfacecolor="none",
            markeredgecolor=COLORS["catmull_rom"], markersize=9,
            markeredgewidth=1.4, label="CR interpolates ctrl pts"),
 ]
 ax_ov.legend(handles=legend_handles, loc="lower right",
-             fontsize=8, framealpha=0.9)
+             fontsize=7.5, framealpha=0.9)
 
 # Annotate a region where the curves diverge
 ax_ov.annotate("curves diverge\nnear sharp valleys",
@@ -376,9 +414,9 @@ ax_ov.annotate("curves diverge\nnear sharp valleys",
                          edgecolor="#CCCCCC", alpha=0.9))
 
 
-# ── Row 1 right (cols 2-3): Local-support perturbation demo ─────────────
+# ── Row 1 right (cols 3-4): Local-support perturbation demo ─────────────
 
-ax_ls = fig.add_subplot(gs[1, 2:4])
+ax_ls = fig.add_subplot(gs[1, 3:5])
 _style_ax(ax_ls, title="Local support — effect of moving one control point\n"
           "(highlighted ★ = perturbed, shaded region = curve change)", r_max=90)
 
@@ -387,6 +425,7 @@ for poly_orig, poly_pert, color, key in [
     (bs_C,  bs_Cp,  COLORS["bspline"],     "bspline"),
     (bz_C,  bz_Cp,  COLORS["bezier"],      "bezier"),
     (cr_C,  cr_Cp,  COLORS["catmull_rom"], "catmull_rom"),
+    (pw_C,  pw_Cp,  COLORS["pwlinear"],    "pwlinear"),
 ]:
     # Original: thin dashed
     _draw_profile(ax_ls, poly_orig, color, lw=1.1, alpha=0.4)
@@ -429,26 +468,25 @@ ax_ls.annotate(
 
 ls_legend = [
     Line2D([0], [0], color=COLORS[k], lw=2.2, label=LABELS[k])
-    for k in ("bspline", "bezier", "catmull_rom")
+    for k in ("bspline", "bezier", "catmull_rom", "pwlinear")
 ] + [
-    Line2D([0], [0], color=COLORS[k], lw=1.1, alpha=0.4, ls="--",
-           label="original profile")
-    for k in ("bspline",)
+    Line2D([0], [0], color="#888888", lw=1.1, alpha=0.6, ls="-",
+           label="original profile (dashed)"),
 ]
-ax_ls.legend(handles=ls_legend, loc="lower right", fontsize=8, framealpha=0.9)
+ax_ls.legend(handles=ls_legend, loc="lower right", fontsize=7.5, framealpha=0.9)
 
 
 # ── Row labels ───────────────────────────────────────────────────────────
 
-fig.text(0.01, 0.72, "A", fontsize=14, fontweight="bold", color="#333333",
+fig.text(0.005, 0.74, "A", fontsize=14, fontweight="bold", color="#333333",
          va="center", ha="left")
-fig.text(0.01, 0.24, "B", fontsize=14, fontweight="bold", color="#333333",
+fig.text(0.005, 0.22, "B", fontsize=14, fontweight="bold", color="#333333",
          va="center", ha="left")
-fig.text(0.04, 0.72,
+fig.text(0.025, 0.74,
          "Sharp alternating control radii (r ∈ {30, 72} mm, N=10)",
          fontsize=8, color="#555555", va="center")
-fig.text(0.04, 0.24,
-         "Smooth 3-lobe shape (left) and asymmetric shape with one perturbed control point (right)",
+fig.text(0.025, 0.22,
+         "Left: smooth 3-lobe shape (all 5 families).  Right: asymmetric shape with one perturbed control point",
          fontsize=8, color="#555555", va="center")
 
 

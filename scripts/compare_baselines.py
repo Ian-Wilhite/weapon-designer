@@ -53,20 +53,14 @@ from weapon_designer.config import (
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _make_cases() -> dict[str, WeaponConfig]:
-    """Return all 10 evaluation cases with default (baseline) optimization params."""
+    """Return disk-only evaluation cases."""
     cases: dict[str, WeaponConfig] = {}
 
     # Shared weight profiles
-    _w_disk  = OptimizationWeights(moment_of_inertia=0.30, bite=0.15, structural_integrity=0.20,
-                                    mass_utilization=0.10, balance=0.10, impact_zone=0.15)
-    _w_moi   = OptimizationWeights(moment_of_inertia=0.40, bite=0.10, structural_integrity=0.15,
-                                    mass_utilization=0.10, balance=0.10, impact_zone=0.15)
-    _w_egg3  = OptimizationWeights(moment_of_inertia=0.25, bite=0.20, structural_integrity=0.20,
-                                    mass_utilization=0.10, balance=0.10, impact_zone=0.15)
-    _w_egg4  = OptimizationWeights(moment_of_inertia=0.20, bite=0.25, structural_integrity=0.20,
-                                    mass_utilization=0.10, balance=0.10, impact_zone=0.15)
-    _w_drum  = OptimizationWeights(moment_of_inertia=0.25, bite=0.20, structural_integrity=0.25,
-                                    mass_utilization=0.10, balance=0.05, impact_zone=0.15)
+    _w_disk = OptimizationWeights(moment_of_inertia=0.30, bite=0.15, structural_integrity=0.20,
+                                   mass_utilization=0.10, balance=0.10, impact_zone=0.15)
+    _w_moi  = OptimizationWeights(moment_of_inertia=0.40, bite=0.10, structural_integrity=0.15,
+                                   mass_utilization=0.10, balance=0.10, impact_zone=0.15)
 
     cases["heavyweight_disk"] = WeaponConfig(
         material=Material("AR500", 7850, 1400, 50),
@@ -86,40 +80,6 @@ def _make_cases() -> dict[str, WeaponConfig]:
                                         mass_utilization=0.10, balance=0.10, impact_zone=0.15),
             num_fourier_terms=4, num_cutout_pairs=2, max_iterations=200, population_size=60),
     )
-    cases["heavyweight_bar"] = WeaponConfig(
-        material=Material("S7_Tool_Steel", 7750, 1600, 56),
-        weapon_style="bar", sheet_thickness_mm=12, weight_budget_kg=5.0, rpm=10000,
-        mounting=Mounting(19.05, 40, 4, 6.0),
-        envelope=Envelope(max_radius_mm=200, max_length_mm=400, max_width_mm=70),
-        optimization=OptimizationParams(weights=_w_disk, num_fourier_terms=4,
-                                        num_cutout_pairs=2, max_iterations=200, population_size=60),
-    )
-    cases["compact_bar"] = WeaponConfig(
-        material=Material("AR500", 7850, 1400, 50),
-        weapon_style="bar", sheet_thickness_mm=10, weight_budget_kg=3.0, rpm=9000,
-        mounting=Mounting(15.0, 30, 4, 5.0),
-        envelope=Envelope(max_radius_mm=150, max_length_mm=280, max_width_mm=55),
-        optimization=OptimizationParams(
-            weights=OptimizationWeights(moment_of_inertia=0.30, bite=0.15, structural_integrity=0.20,
-                                        mass_utilization=0.10, balance=0.10, impact_zone=0.15),
-            num_fourier_terms=3, num_cutout_pairs=2, max_iterations=200, population_size=60),
-    )
-    cases["eggbeater_3blade"] = WeaponConfig(
-        material=Material("AR500", 7850, 1400, 50),
-        weapon_style="eggbeater", sheet_thickness_mm=8, weight_budget_kg=3.5, rpm=12000,
-        mounting=Mounting(20.0, 38, 3, 5.5),
-        envelope=Envelope(max_radius_mm=130),
-        optimization=OptimizationParams(weights=_w_egg3, num_fourier_terms=4,
-                                        num_cutout_pairs=2, max_iterations=200, population_size=60),
-    )
-    cases["eggbeater_2blade"] = WeaponConfig(
-        material=Material("S7_Tool_Steel", 7750, 1600, 56),
-        weapon_style="eggbeater", sheet_thickness_mm=10, weight_budget_kg=4.0, rpm=10000,
-        mounting=Mounting(22.0, 45, 4, 6.0),
-        envelope=Envelope(max_radius_mm=140),
-        optimization=OptimizationParams(weights=_w_disk, num_fourier_terms=4,
-                                        num_cutout_pairs=2, max_iterations=200, population_size=60),
-    )
     cases["max_energy_disk"] = WeaponConfig(
         material=Material("AR500", 7850, 1400, 50),
         weapon_style="disk", sheet_thickness_mm=15, weight_budget_kg=8.0, rpm=7000,
@@ -128,36 +88,58 @@ def _make_cases() -> dict[str, WeaponConfig]:
         optimization=OptimizationParams(weights=_w_moi, num_fourier_terms=5,
                                         num_cutout_pairs=3, max_iterations=200, population_size=60),
     )
-    cases["drum_disk"] = WeaponConfig(
-        material=Material("AR500", 7850, 1400, 50),
-        weapon_style="disk", sheet_thickness_mm=8, weight_budget_kg=0.65, rpm=15000,
-        mounting=Mounting(10.0, 20, 3, 3.5),
-        envelope=Envelope(max_radius_mm=60),
-        optimization=OptimizationParams(weights=_w_drum, num_fourier_terms=3,
-                                        num_cutout_pairs=1, max_iterations=200, population_size=60),
-    )
-    cases["undercutter_bar"] = WeaponConfig(
-        material=Material("AR500", 7850, 1400, 50),
-        weapon_style="bar", sheet_thickness_mm=8, weight_budget_kg=4.0, rpm=8000,
-        mounting=Mounting(20.0, 40, 4, 6.0),
-        envelope=Envelope(max_radius_mm=180, max_length_mm=350, max_width_mm=90),
-        optimization=OptimizationParams(weights=_w_disk, num_fourier_terms=4,
-                                        num_cutout_pairs=2, max_iterations=200, population_size=60),
-    )
-    cases["eggbeater_4blade"] = WeaponConfig(
-        material=Material("AR500", 7850, 1400, 50),
-        weapon_style="eggbeater", sheet_thickness_mm=6, weight_budget_kg=2.5, rpm=14000,
-        mounting=Mounting(15.0, 30, 4, 4.0),
-        envelope=Envelope(max_radius_mm=100),
-        optimization=OptimizationParams(weights=_w_egg4, num_fourier_terms=4,
-                                        num_cutout_pairs=2, max_iterations=200, population_size=60),
-    )
     return cases
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Result dataclasses
 # ──────────────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Pareto helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _config_fingerprint(cfg: WeaponConfig) -> str:
+    """Short MD5 hex digest of key optimizer settings — groups runs by algorithm config."""
+    import hashlib
+    keys = ["evaluation_mode", "profile_type", "cutout_type",
+            "n_bspline_points", "fea_coarse_spacing_mm", "staged_eval_gate"]
+    d = {k: getattr(cfg.optimization, k, None) for k in keys}
+    raw = json.dumps(d, sort_keys=True).encode()
+    return hashlib.md5(raw).hexdigest()[:8]
+
+
+def _auc_score(history: list[dict]) -> float:
+    """Area under best-so-far score vs elapsed_s curve (trapezoidal rule)."""
+    if not history:
+        return float("nan")
+    times = [h.get("elapsed_s", 0.0) for h in history]
+    scores = [h.get("score", 0.0) for h in history]
+    best_so_far = []
+    cur_best = float("-inf")
+    for s in scores:
+        if s > cur_best:
+            cur_best = s
+        best_so_far.append(cur_best)
+    if len(times) < 2:
+        return float(best_so_far[-1]) if best_so_far else float("nan")
+    return float(np.trapz(best_so_far, times))
+
+
+def _time_to_threshold(history: list[dict], threshold: float) -> float:
+    """Wall-clock seconds until best-so-far score first reaches ``threshold``.
+
+    Returns nan if never reached.
+    """
+    best = float("-inf")
+    for h in history:
+        s = h.get("score", 0.0)
+        if s > best:
+            best = s
+        if best >= threshold:
+            return float(h.get("elapsed_s", float("nan")))
+    return float("nan")
+
 
 @dataclass
 class SingleRun:
@@ -169,6 +151,14 @@ class SingleRun:
     score: float = float("nan")
     metrics: dict = field(default_factory=dict)
     error: str = ""
+    # Pareto metrics (populated for enhanced runs)
+    n_fea_calls_p1: Optional[int] = None
+    n_fea_calls_p2: Optional[int] = None
+    auc_score: float = float("nan")
+    time_to_05: float = float("nan")
+    time_to_06: float = float("nan")
+    time_to_07: float = float("nan")
+    config_fingerprint: str = ""
 
 
 @dataclass
@@ -258,6 +248,7 @@ def run_baseline_single(name: str, cfg: WeaponConfig, output_dir: Path,
                          replicate: int, quiet: bool = True) -> SingleRun:
     """Run one baseline optimization replicate."""
     from weapon_designer.optimizer import optimize
+    from weapon_designer.exporter import export_weapon_dxf
 
     t0 = time.perf_counter()
     try:
@@ -268,10 +259,17 @@ def run_baseline_single(name: str, cfg: WeaponConfig, output_dir: Path,
                              time.perf_counter() - t0, error="Empty polygon")
 
         # optimizer already computes metrics and score; use them directly
-        metrics = result.get("metrics", {})
+        raw     = result.get("metrics", {})
+        metrics = {k: v for k, v in raw.items()
+                   if not k.startswith("_") and isinstance(v, (int, float, np.floating, np.integer))}
         score   = result.get("score", float("nan"))
         penalty = result.get("penalty", 1.0)
         final   = score * penalty
+
+        # Export DXF alongside the compare results
+        sub_dir = output_dir / f"{name}_base_r{replicate:02d}"
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        export_weapon_dxf(poly, cfg, sub_dir, stem=name)
 
         return SingleRun(name, "baseline", replicate, "success",
                          time.perf_counter() - t0, score=final, metrics=metrics)
@@ -301,10 +299,27 @@ def run_enhanced_single(name: str, cfg: WeaponConfig, output_dir: Path,
         score   = result.get("score", float("nan"))
         penalty = result.get("penalty", 1.0)
         final   = score * penalty
-        metrics = result.get("metrics", {})
+        raw     = result.get("metrics", {})
+        metrics = {k: v for k, v in raw.items()
+                   if not k.startswith("_") and isinstance(v, (int, float, np.floating, np.integer))}
+
+        # Pareto metrics from convergence history
+        hist_p1 = result.get("convergence_p1", [])
+        hist_p2 = result.get("convergence_p2", [])
+        all_hist = hist_p1 + hist_p2
+        nfc_p1 = hist_p1[-1].get("n_fea_calls") if hist_p1 else None
+        nfc_p2 = hist_p2[-1].get("n_fea_calls") if (hist_p2 and isinstance(hist_p2[-1], dict)) else None
+        auc = _auc_score(all_hist)
+        t05 = _time_to_threshold(all_hist, 0.5)
+        t06 = _time_to_threshold(all_hist, 0.6)
+        t07 = _time_to_threshold(all_hist, 0.7)
+        fp  = _config_fingerprint(cfg_out)
 
         return SingleRun(name, "enhanced", replicate, "success",
-                         time.perf_counter() - t0, score=final, metrics=metrics)
+                         time.perf_counter() - t0, score=final, metrics=metrics,
+                         n_fea_calls_p1=nfc_p1, n_fea_calls_p2=nfc_p2,
+                         auc_score=auc, time_to_05=t05, time_to_06=t06,
+                         time_to_07=t07, config_fingerprint=fp)
 
     except Exception as e:
         return SingleRun(name, "enhanced", replicate, "error",
@@ -328,13 +343,16 @@ def _aggregate(runs: list[SingleRun]) -> AggResult:
     score_std  = float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0
     elapsed    = float(np.mean([r.elapsed_s for r in success]))
 
-    # Aggregate per-metric mean/std
+    # Aggregate per-metric mean/std (numeric scalars only; skip private/complex keys)
     all_keys = set()
     for r in success:
         all_keys.update(r.metrics.keys())
     metrics_mean, metrics_std = {}, {}
     for k in all_keys:
+        if k.startswith("_"):
+            continue  # skip private keys (_contacts, _fea_forces, etc.)
         vals = [r.metrics[k] for r in success if k in r.metrics]
+        vals = [v for v in vals if isinstance(v, (int, float, np.floating, np.integer))]
         if vals:
             metrics_mean[k] = float(np.mean(vals))
             metrics_std[k]  = float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0

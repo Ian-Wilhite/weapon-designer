@@ -1,6 +1,14 @@
-"""Multi-objective weighted scoring."""
+"""Multi-objective weighted scoring — unified module.
+
+Provides both the baseline (evaluation_mode='baseline') weighted scorer and
+the physical E_transfer scorer (evaluation_mode='enhanced'|'physical').
+
+Backward-compatible: all public names from the original module are preserved.
+"""
 
 from __future__ import annotations
+
+import math
 
 import numpy as np
 from shapely.geometry import Polygon, MultiPolygon, Point
@@ -100,19 +108,54 @@ def _num_teeth(cfg: WeaponConfig) -> int:
         return 1  # disk spinner
 
 
+def check_constraints(metrics: dict, cfg: WeaponConfig) -> dict:
+    """Check hard constraints.
+
+    Returns dict with sf_ok, mass_ok, com_ok, sf, mass_kg, com_offset_mm.
+    """
+    sf = float(metrics.get("fea_safety_factor", metrics.get("structural_integrity", 0.0)))
+    mass = float(metrics.get("mass_kg", 0.0))
+    com = float(metrics.get("com_offset_mm", 0.0))
+    max_r = cfg.envelope.max_radius_mm
+    sf_min = float(getattr(cfg.optimization, "sf_min_required", 1.5))
+    com_max_frac = float(getattr(cfg.optimization, "com_fraction_max", 0.05))
+    return {
+        "sf_ok": sf >= sf_min,
+        "mass_ok": mass <= cfg.weight_budget_kg,
+        "com_ok": com <= max_r * com_max_frac,
+        "sf": sf,
+        "mass_kg": mass,
+        "com_offset_mm": com,
+    }
+
+
 def compute_metrics(
     poly: Polygon | MultiPolygon,
     cfg: WeaponConfig,
     use_fea: bool = False,
+    fea_spacing: float | None = None,
+    return_mesh: bool = False,
 ) -> dict:
     """Compute all objective metrics for a weapon polygon.
 
     Parameters
     ----------
-    poly : weapon polygon
-    cfg : weapon configuration
-    use_fea : if True, run lightweight 2D FEA for structural scoring
+    poly        : weapon polygon
+    cfg         : weapon configuration
+    use_fea     : if True (baseline mode), run lightweight 2D FEA for structural scoring
+    fea_spacing : mesh spacing override (enhanced mode)
+    return_mesh : if True (enhanced mode), cache mesh arrays in returned dict
+
+    Routing:
+    - evaluation_mode == 'baseline': classic geometric/physics metrics.
+    - evaluation_mode == 'enhanced' or 'physical': delegates to
+      compute_metrics_enhanced from objectives_enhanced.py (FEA in loop).
     """
+    mode = getattr(cfg.optimization, "evaluation_mode", "baseline")
+    if mode in ("enhanced", "physical"):
+        from .objectives_enhanced import compute_metrics_enhanced
+        return compute_metrics_enhanced(poly, cfg, fea_spacing=fea_spacing, return_mesh=return_mesh)
+
     t = cfg.sheet_thickness_mm
     rho = cfg.material.density_kg_m3
 
@@ -144,6 +187,7 @@ def compute_metrics(
 
     if use_fea:
         from .fea import fea_stress_analysis
+        spacing = fea_spacing if fea_spacing is not None else 10.0
         fea = fea_stress_analysis(
             poly,
             rpm=cfg.rpm,
@@ -151,6 +195,7 @@ def compute_metrics(
             thickness_mm=t,
             yield_strength_mpa=cfg.material.yield_strength_mpa,
             bore_diameter_mm=cfg.mounting.bore_diameter_mm,
+            mesh_spacing=spacing,
         )
         result["fea_peak_stress_mpa"] = fea["peak_stress_mpa"]
         result["fea_safety_factor"] = fea["safety_factor"]
@@ -206,3 +251,56 @@ def weighted_score(metrics: dict, cfg: WeaponConfig) -> float:
     )
 
     return total
+
+
+def score_analytical(metrics: dict, cfg: WeaponConfig) -> float:
+    """Analytical E_transfer score without SF constraint check.
+
+    Returns E_transfer in Joules:
+        E_transfer = KE_weapon × contact_quality² × (bite / max_bite)
+
+    where KE_weapon = 0.5 × I[kg·m²] × ω[rad/s]²
+
+    Suitable for surrogate acquisition functions where we want the physical
+    objective without hard-rejecting infeasible candidates.
+    """
+    moi = float(metrics.get("moi_kg_mm2", 0.0))
+    omega = 2.0 * math.pi * max(cfg.rpm, 1) / 60.0
+    KE = 0.5 * moi * 1e-6 * omega ** 2  # Joules (moi mm² → m²)
+
+    cq = float(metrics.get("contact_quality", 0.5))
+    bite = float(metrics.get("bite_mm", 0.0))
+    mb = float(metrics.get("max_bite_mm", 1.0))
+    bite_frac = min(bite / max(mb, 1e-6), 1.0)
+
+    return KE * (cq ** 2) * bite_frac
+
+
+def score(metrics: dict, weapon, cfg: WeaponConfig) -> float:
+    """Unified scoring function.
+
+    evaluation_mode == 'baseline':
+        Returns classic weighted score in [0, 1] (backward-compatible).
+
+    evaluation_mode == 'enhanced' | 'physical':
+        Returns E_transfer in Joules (NOT normalised):
+            E_transfer = KE_weapon × contact_quality² × (bite / max_bite)
+        Hard constraints (SF, mass, CoM) → returns 0.0 if violated.
+
+    Parameters
+    ----------
+    metrics : dict from compute_metrics()
+    weapon  : weapon polygon (kept for API symmetry, unused in scoring)
+    cfg     : WeaponConfig
+    """
+    mode = getattr(cfg.optimization, "evaluation_mode", "baseline")
+
+    if mode == "baseline":
+        return weighted_score(metrics, cfg)
+
+    # Enhanced / physical: physical Joules objective with hard constraints
+    c = check_constraints(metrics, cfg)
+    if not (c["sf_ok"] and c["mass_ok"] and c["com_ok"]):
+        return 0.0
+
+    return score_analytical(metrics, cfg)

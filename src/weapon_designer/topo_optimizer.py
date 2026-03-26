@@ -368,6 +368,7 @@ def render_topo_frame(
     cfg: WeaponConfig,
     save_path: Path | str,
     dpi: int = 90,
+    allowable_void_poly: Polygon | MultiPolygon | None = None,
 ) -> Path | None:
     """Save a two-panel topology-optimisation progress frame.
 
@@ -416,6 +417,13 @@ def render_topo_frame(
         else:
             x, y = outer_poly.exterior.xy
             ax0.plot(x, y, color="#4a90e2", linewidth=0.8, alpha=0.6)
+
+    # Draw allowable void region boundary (dashed cyan)
+    if allowable_void_poly is not None and not allowable_void_poly.is_empty:
+        for geom in (allowable_void_poly.geoms if hasattr(allowable_void_poly, "geoms")
+                     else [allowable_void_poly]):
+            x, y = geom.exterior.xy
+            ax0.plot(x, y, color="#00e5ff", linewidth=0.7, linestyle="--", alpha=0.55)
 
     cbar0 = fig.colorbar(col0, ax=ax0, fraction=0.03, pad=0.03)
     cbar0.set_label("Density ρ", color="white", fontsize=8)
@@ -466,6 +474,13 @@ def render_topo_frame(
             x, y = outer_poly.exterior.xy
             ax1.plot(x, y, color="#cccccc", linewidth=0.5, alpha=0.5)
 
+    # Draw allowable void region boundary (dashed cyan)
+    if allowable_void_poly is not None and not allowable_void_poly.is_empty:
+        for geom in (allowable_void_poly.geoms if hasattr(allowable_void_poly, "geoms")
+                     else [allowable_void_poly]):
+            x, y = geom.exterior.xy
+            ax1.plot(x, y, color="#00e5ff", linewidth=0.7, linestyle="--", alpha=0.55)
+
     cbar1 = fig.colorbar(col1, ax=ax1, fraction=0.03, pad=0.03)
     cbar1.set_label("Strain energy (norm.)", color="white", fontsize=8)
     cbar1.ax.tick_params(colors="white", labelsize=7)
@@ -503,6 +518,7 @@ def render_binary_frame(
     cfg: WeaponConfig,
     save_path: Path | str,
     dpi: int = 90,
+    allowable_void_poly: Polygon | MultiPolygon | None = None,
 ) -> Path | None:
     """Binary threshold view: left = thresholded mesh, right = extracted polygon."""
     try:
@@ -532,6 +548,14 @@ def render_binary_frame(
         antialiased=False,
     )
     ax0.add_collection(col0)
+
+    # Draw allowable void region boundary on binary mesh panel (dashed cyan)
+    if allowable_void_poly is not None and not allowable_void_poly.is_empty:
+        for geom in (allowable_void_poly.geoms if hasattr(allowable_void_poly, "geoms")
+                     else [allowable_void_poly]):
+            x, y = geom.exterior.xy
+            ax0.plot(x, y, color="#00e5ff", linewidth=0.7, linestyle="--", alpha=0.55)
+
     ax0.set_title(
         f"Iter {iteration:03d}  ·  Binary design (ρ ≥ 0.5)\n"
         f"Vf = {v_current:.3f} / {v_target:.3f}",
@@ -565,6 +589,13 @@ def render_binary_frame(
         _draw(ax1, extracted_poly)
     else:
         _draw(ax1, outer_poly)
+
+    # Draw allowable void region boundary on extracted polygon panel (dashed cyan)
+    if allowable_void_poly is not None and not allowable_void_poly.is_empty:
+        for geom in (allowable_void_poly.geoms if hasattr(allowable_void_poly, "geoms")
+                     else [allowable_void_poly]):
+            x, y = geom.exterior.xy
+            ax1.plot(x, y, color="#00e5ff", linewidth=0.7, linestyle="--", alpha=0.55)
 
     ax1.set_title(
         f"Extracted weapon polygon\nC = {compliance:.3e}",
@@ -750,7 +781,7 @@ def topology_optimize(
     r_min_factor   = getattr(opt, "topo_r_min_factor",    2.5)
     w_compliance   = getattr(opt, "topo_w_compliance",    0.5)
     frame_interval = getattr(opt, "topo_frame_interval",  2)
-    fix_rim        = getattr(opt, "topo_fix_rim",         True)
+    edge_offset    = getattr(opt, "topo_edge_offset_mm",   5.0)
 
     w_moi      = 1.0 - w_compliance
     r_min      = r_min_factor * mesh_spacing
@@ -798,16 +829,39 @@ def topology_optimize(
 
     # ── pre-compute element geometry ──────────────────────────────────────
     K_elem, areas, centroids = _precompute_elements(nodes, elements, nu, thickness)
-    r_centroid = np.hypot(centroids[:, 0], centroids[:, 1])
 
-    # ── fixed element classification ──────────────────────────────────────
-    # Fixed solid: annular hub zone just outside the bore (ensures connectivity)
-    fixed_solid = r_centroid <= bore_r * 2.5
-    if fix_rim:
-        fixed_solid |= r_centroid >= max_r * 0.88
+    # ── fixed element classification (offset-based) ────────────────────────
+    # Allowable void region = solid polygon eroded inward by edge_offset_mm.
+    # Negative buffer simultaneously shrinks the outer boundary inward (rim stays
+    # solid) and expands interior holes outward (hub/bolt zones stay solid).
+    from shapely.prepared import prep as _shp_prep
+    allowable_void_poly = solid_polygon.buffer(-edge_offset)
 
-    # No fixed void needed: mounting holes are already absent from the mesh
-    fixed_void = np.zeros(n_elem, dtype=bool)
+    if allowable_void_poly.is_empty or allowable_void_poly.area < solid_polygon.area * 0.05:
+        _log(
+            f"[topo] WARNING: topo_edge_offset_mm={edge_offset} too large; "
+            f"halving to {edge_offset / 2.0:.1f}"
+        )
+        allowable_void_poly = solid_polygon.buffer(-edge_offset / 2.0)
+
+    if not allowable_void_poly.is_empty:
+        _prep = _shp_prep(allowable_void_poly)
+        in_allowable = np.fromiter(
+            (_prep.contains(Point(c)) for c in centroids),
+            dtype=bool,
+            count=n_elem,
+        )
+    else:
+        in_allowable = np.zeros(n_elem, dtype=bool)
+
+    fixed_solid = ~in_allowable   # elements outside the eroded region stay solid
+    fixed_void  = np.zeros(n_elem, dtype=bool)
+
+    _log(
+        f"[topo] edge_offset={edge_offset} mm  "
+        f"allowable_area={allowable_void_poly.area:.0f} mm²  "
+        f"free_elements={in_allowable.sum()}/{n_elem}"
+    )
 
     # ── boundary conditions (for FEA solve) ──────────────────────────────
     _, F_dummy, free_dofs = _apply_boundary_conditions(
@@ -957,6 +1011,7 @@ def topology_optimize(
                 mass_kg=mass_kg,
                 cfg=cfg,
                 save_path=topo_dir / f"topo_{frame_idx:04d}.png",
+                allowable_void_poly=allowable_void_poly,
             )
 
             # Adaptive threshold for intermediate binary view
@@ -992,6 +1047,7 @@ def topology_optimize(
                 compliance=compliance,
                 cfg=cfg,
                 save_path=binary_dir / f"binary_{frame_idx:04d}.png",
+                allowable_void_poly=allowable_void_poly,
             )
 
             # Save sidecar JSON

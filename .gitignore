@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+.env
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated outputs
+*.dxf
+*.gif
+*.png
+*.npz
+eval_results/
+sweep_results/
+profile_sweep/
+profile_sweep_overnight/
+spline_viz/
+frames_p1/
+frames_p2/
+frames_topo/
+frames_topo_binary/
+frames_topo_fea/
+
+# Stats/log outputs
+*_stats.json
+eval_*.log
+summary_*.json
+speed_sweep.png
+
+# Large compute outputs (moved to outputs/)
+outputs/
+*.log
+*.pkl
+fea_database*/
+profile_sweep*/
+rom_surrogate/
+surrogate_run/
+spiral_preview/
+verify_fea/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

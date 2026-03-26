@@ -4,111 +4,186 @@
 \providecommand\HyField@AuxAddToCoFields[2]{}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Swap-point summary (see also \texttt  {docs/ARCHITECTURE.md}).}}{1}{table.caption.2}\protected@file@percent }
-\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{tab:swappoints}{{1}{1}{Swap-point summary (see also \texttt {docs/ARCHITECTURE.md})}{table.caption.2}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {2}System Architecture}{1}{section.2}\protected@file@percent }
 \newlabel{sec:arch}{{2}{1}{System Architecture}{section.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Swap Points}{1}{subsection.2.1}\protected@file@percent }
 \newlabel{sec:swappoints}{{2.1}{1}{Swap Points}{subsection.2.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Data Flow}{1}{subsection.2.2}\protected@file@percent }
-\newlabel{sec:dataflow}{{2.2}{1}{Data Flow}{subsection.2.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Enhanced-mode data flow (WeaponConfig driven).}}{2}{figure.caption.3}\protected@file@percent }
-\newlabel{fig:dataflow}{{1}{2}{Enhanced-mode data flow (WeaponConfig driven)}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Architecture Overview}{1}{subsection.2.2}\protected@file@percent }
+\newlabel{sec:archdiag}{{2.2}{1}{Architecture Overview}{subsection.2.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Swap-point summary.}}{2}{table.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:swappoints}{{1}{2}{Swap-point summary}{table.caption.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Permutation Matrix}{2}{subsection.2.3}\protected@file@percent }
 \newlabel{sec:permmatrix}{{2.3}{2}{Permutation Matrix}{subsection.2.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Valid slot combinations (see \texttt  {docs/ARCHITECTURE.md}).}}{2}{table.caption.4}\protected@file@percent }
-\newlabel{tab:permmatrix}{{2}{2}{Valid slot combinations (see \texttt {docs/ARCHITECTURE.md})}{table.caption.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Tested slot combinations.}}{2}{table.caption.4}\protected@file@percent }
+\newlabel{tab:permmatrix}{{2}{2}{Tested slot combinations}{table.caption.4}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}Profile Parametrisations}{2}{section.3}\protected@file@percent }
 \newlabel{sec:profiles}{{3}{2}{Profile Parametrisations}{section.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Fourier Radial Series (baseline, frozen)}{2}{subsection.3.1}\protected@file@percent }
-\newlabel{sec:fourier}{{3.1}{2}{Fourier Radial Series (baseline, frozen)}{subsection.3.1}{}}
-\newlabel{eq:fourier}{{2}{2}{Fourier Radial Series (baseline, frozen)}{equation.3.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Periodic Cubic B-Spline}{2}{subsection.3.2}\protected@file@percent }
-\newlabel{sec:bspline}{{3.2}{2}{Periodic Cubic B-Spline}{subsection.3.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Properties.}{2}{section*.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Composite Cubic B\'ezier}{2}{subsection.3.3}\protected@file@percent }
-\newlabel{sec:bezier}{{3.3}{2}{Composite Cubic B\'ezier}{subsection.3.3}{}}
-\newlabel{eq:cr_tangent}{{4}{3}{Composite Cubic B\'ezier}{equation.3.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces All five profile families rendered on identical $N{=}10$ control radii with a sharp alternating pattern (top row) and compared on a smooth 3-lobe shape with one perturbed control point (bottom row). Catmull-Rom passes exactly through every control point (interpolating); B-spline produces the smoothest boundary (C\textsuperscript  {2}) but does not interpolate; Bézier is C\textsuperscript  {1}; piecewise-linear (C\textsuperscript  {0}) shows kinks at every knot; Fourier shows Gibbs ringing on sharp features when too few harmonics are used.}}{2}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:splines}{{2}{2}{All five profile families rendered on identical $N{=}10$ control radii with a sharp alternating pattern (top row) and compared on a smooth 3-lobe shape with one perturbed control point (bottom row). Catmull-Rom passes exactly through every control point (interpolating); B-spline produces the smoothest boundary (C\textsuperscript {2}) but does not interpolate; Bézier is C\textsuperscript {1}; piecewise-linear (C\textsuperscript {0}) shows kinks at every knot; Fourier shows Gibbs ringing on sharp features when too few harmonics are used}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Piecewise-Linear (C\textsuperscript  {0}, baseline for comparison)}{2}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:pwlinear}{{3.1}{2}{Piecewise-Linear (C\textsuperscript {0}, baseline for comparison)}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Fourier Radial Series (optimiser baseline, frozen)}{2}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:fourier}{{3.2}{2}{Fourier Radial Series (optimiser baseline, frozen)}{subsection.3.2}{}}
+\newlabel{eq:fourier}{{2}{2}{Fourier Radial Series (optimiser baseline, frozen)}{equation.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Periodic Cubic B-Spline}{2}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:bspline}{{3.3}{2}{Periodic Cubic B-Spline}{subsection.3.3}{}}
+\citation{catmullrom1974}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Five-layer system architecture. Node shading encodes role: orange = configuration, purple = runtime dispatcher (swap point $\diamond $), blue (thick border) = configurable implementation, gray = fixed core, teal = output. The score aggregation feeds back into the selection stage, closing the optimisation loop.}}{3}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:arch}{{1}{3}{Five-layer system architecture. Node shading encodes role: orange = configuration, purple = runtime dispatcher (swap point $\diamond $), blue (thick border) = configurable implementation, gray = fixed core, teal = output. The score aggregation feeds back into the selection stage, closing the optimisation loop}{figure.caption.3}{}}
 \@writefile{toc}{\contentsline {paragraph}{Properties.}{3}{section*.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Centripetal Catmull-Rom}{3}{subsection.3.4}\protected@file@percent }
-\newlabel{sec:catmullrom}{{3.4}{3}{Centripetal Catmull-Rom}{subsection.3.4}{}}
-\@writefile{toc}{\contentsline {paragraph}{Properties.}{3}{section*.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Profile Family Comparison}{3}{subsection.3.5}\protected@file@percent }
-\newlabel{sec:profilecomp}{{3.5}{3}{Profile Family Comparison}{subsection.3.5}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Profile parametrisation comparison.}}{3}{table.caption.8}\protected@file@percent }
-\newlabel{tab:profilecomp}{{3}{3}{Profile parametrisation comparison}{table.caption.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Evaluation Methods}{3}{section.4}\protected@file@percent }
-\newlabel{sec:eval}{{4}{3}{Evaluation Methods}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Baseline Objective}{3}{subsection.4.1}\protected@file@percent }
-\newlabel{sec:baseline_obj}{{4.1}{3}{Baseline Objective}{subsection.4.1}{}}
-\@writefile{toc}{\contentsline {paragraph}{Formula bite.}{3}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Geometric structural proxy.}{3}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Enhanced Objective: Kinematic Spiral Bite}{3}{subsection.4.2}\protected@file@percent }
-\newlabel{sec:spiral}{{4.2}{3}{Enhanced Objective: Kinematic Spiral Bite}{subsection.4.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Physical model.}{3}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Composite Cubic B\'{e}zier}{3}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:bezier}{{3.4}{3}{Composite Cubic B\'{e}zier}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Centripetal Catmull-Rom}{3}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:catmullrom}{{3.5}{3}{Centripetal Catmull-Rom}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Profile Family Comparison}{3}{subsection.3.6}\protected@file@percent }
+\newlabel{sec:profilecomp}{{3.6}{3}{Profile Family Comparison}{subsection.3.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}Stability Analysis: Jacobian Decomposition}{3}{subsection.3.7}\protected@file@percent }
+\newlabel{sec:stability}{{3.7}{3}{Stability Analysis: Jacobian Decomposition}{subsection.3.7}{}}
+\newlabel{eq:chain}{{7}{3}{Stability Analysis: Jacobian Decomposition}{equation.3.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Profile parametrisation properties and measured Jacobian stability metrics at the circular midpoint ($N{=}12$, $h{=}1\%$ of parameter range). $\kappa (J)$ = condition number of $J=\partial p/\partial x$; $\mathrm  {rank}(J)$ = effective rank at the $1\%\,\sigma _{\max }$ threshold; $\bar  {c}$ = mean pairwise cosine similarity of $\nabla _x O$ across 8 step sizes (gradient direction consistency; 1.0 = perfectly stable direction).}}{4}{table.caption.7}\protected@file@percent }
+\newlabel{tab:profilecomp}{{3}{4}{Profile parametrisation properties and measured Jacobian stability metrics at the circular midpoint ($N{=}12$, $h{=}1\%$ of parameter range). $\kappa (J)$ = condition number of $J=\partial p/\partial x$; $\mathrm {rank}(J)$ = effective rank at the $1\%\,\sigma _{\max }$ threshold; $\bar {c}$ = mean pairwise cosine similarity of $\nabla _x O$ across 8 step sizes (gradient direction consistency; 1.0 = perfectly stable direction)}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.1}Singular Value Spectrum of $J$}{4}{subsubsection.3.7.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Normalised singular value spectra of the profile Jacobian $J=\partial p/\partial x$ at the circular midpoint ($N{=}12$). Bézier, Catmull-Rom, and piecewise-linear maintain full rank. Fourier loses two high-frequency modes; B-spline loses three and has a condition number ${\sim }10^{12}$.}}{4}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:stab_sv}{{3}{4}{Normalised singular value spectra of the profile Jacobian $J=\partial p/\partial x$ at the circular midpoint ($N{=}12$). Bézier, Catmull-Rom, and piecewise-linear maintain full rank. Fourier loses two high-frequency modes; B-spline loses three and has a condition number ${\sim }10^{12}$}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.2}Condition Number vs.\ Step Size}{4}{subsubsection.3.7.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Jacobian condition number $\kappa (J)$ as a function of step size $h$. Well-conditioned families (Bézier, Catmull-Rom, piecewise-linear, Fourier) are flat across decades. B-spline's $\kappa \sim 10^{12}$ is persistent for all $h$ relevant to DE mutation steps.}}{4}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:stab_cond}{{4}{4}{Jacobian condition number $\kappa (J)$ as a function of step size $h$. Well-conditioned families (Bézier, Catmull-Rom, piecewise-linear, Fourier) are flat across decades. B-spline's $\kappa \sim 10^{12}$ is persistent for all $h$ relevant to DE mutation steps}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.3}Gradient Norm vs.\ Step Size}{4}{subsubsection.3.7.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Objective gradient norm $\|\nabla _x O\|_2$ vs.\ step size $h$. A flat plateau indicates a smooth, well-conditioned landscape. B-spline degrades earlier due to ill-conditioned Jacobian.}}{5}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:stab_gnorm}{{5}{5}{Objective gradient norm $\|\nabla _x O\|_2$ vs.\ step size $h$. A flat plateau indicates a smooth, well-conditioned landscape. B-spline degrades earlier due to ill-conditioned Jacobian}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.4}Gradient Direction Consistency}{5}{subsubsection.3.7.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Mean pairwise cosine similarity of $\nabla _x O$ vectors estimated at different step sizes (higher is better). All parametrisations except B-spline achieve a score of 1.000, meaning their gradient direction is robust to the choice of finite-difference step.}}{5}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:stab_gcos}{{6}{5}{Mean pairwise cosine similarity of $\nabla _x O$ vectors estimated at different step sizes (higher is better). All parametrisations except B-spline achieve a score of 1.000, meaning their gradient direction is robust to the choice of finite-difference step}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.5}Reconstructed Profile Sensitivity $\partial O/\partial p(\theta )$}{5}{subsubsection.3.7.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Reconstructed profile sensitivity $\partial O/\partial r(\theta )$ obtained by solving $J^\top \boldsymbol  {q}=\nabla _x O$ in the least-squares sense. Well-conditioned families produce a near-flat sensitivity; B-spline shows artificial spikes due to rank deficiency.}}{5}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:stab_dOdp}{{7}{5}{Reconstructed profile sensitivity $\partial O/\partial r(\theta )$ obtained by solving $J^\top \boldsymbol {q}=\nabla _x O$ in the least-squares sense. Well-conditioned families produce a near-flat sensitivity; B-spline shows artificial spikes due to rank deficiency}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.6}Richardson Convergence}{5}{subsubsection.3.7.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Richardson convergence error vs.\ step size. All families closely follow the $h^2$ reference, confirming that the fast objective is $C^2$-smooth at the midpoint. Deviation from $h^2$ at very small $h$ is floating-point cancellation in the second central difference.}}{6}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:stab_rich}{{8}{6}{Richardson convergence error vs.\ step size. All families closely follow the $h^2$ reference, confirming that the fast objective is $C^2$-smooth at the midpoint. Deviation from $h^2$ at very small $h$ is floating-point cancellation in the second central difference}{figure.caption.13}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.7}Parameter Aliasing and Influence Functions}{6}{subsubsection.3.7.7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Top row: normalised Jacobian heat-strip $J[\theta , i]/\max |J[\cdot ,i]|$ for each profile family ($N=12$, $h=1\%$ of range). Local families (Bézier, Catmull-Rom, Piecewise-linear) produce bright diagonal bands confirming local support. B-spline shows broad oscillatory columns; Fourier shows full-height horizontal stripes (global support). Bottom row: column-normalised parameter correlation matrix $C_{ij}=(J_{:i}^\top J_{:j})/(\|J_{:i}\|\cdot \|J_{:j}\|)$. B-spline exhibits the characteristic anti-diagonal pattern (antipodal parameter pairs nearly collinear). Bézier and Catmull-Rom approach the identity matrix, confirming near-independent parameters.}}{6}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:stab_J_heatmap}{{9}{6}{Top row: normalised Jacobian heat-strip $J[\theta , i]/\max |J[\cdot ,i]|$ for each profile family ($N=12$, $h=1\%$ of range). Local families (Bézier, Catmull-Rom, Piecewise-linear) produce bright diagonal bands confirming local support. B-spline shows broad oscillatory columns; Fourier shows full-height horizontal stripes (global support). Bottom row: column-normalised parameter correlation matrix $C_{ij}=(J_{:i}^\top J_{:j})/(\|J_{:i}\|\cdot \|J_{:j}\|)$. B-spline exhibits the characteristic anti-diagonal pattern (antipodal parameter pairs nearly collinear). Bézier and Catmull-Rom approach the identity matrix, confirming near-independent parameters}{figure.caption.14}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.8}Conditioning vs.\ Parameter Count $N$}{6}{subsubsection.3.7.8}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Condition number $\kappa (J)$ of the profile Jacobian as a function of the number of control parameters $N$. B-spline is consistently $10^{12}$ across all $N$; Fourier plateaus near $10^5$; Bézier, Catmull-Rom, and piecewise-linear grow as $\mathcal  {O}(N^2)$ and remain well below $10^3$ for $N\le 20$.}}{6}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:stab_cond_N}{{10}{6}{Condition number $\kappa (J)$ of the profile Jacobian as a function of the number of control parameters $N$. B-spline is consistently $10^{12}$ across all $N$; Fourier plateaus near $10^5$; Bézier, Catmull-Rom, and piecewise-linear grow as $\mathcal {O}(N^2)$ and remain well below $10^3$ for $N\le 20$}{figure.caption.15}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.7.9}Summary and Implications for Gradient-Based Optimisation}{6}{subsubsection.3.7.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Evaluation Methods}{6}{section.4}\protected@file@percent }
+\newlabel{sec:eval}{{4}{6}{Evaluation Methods}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Baseline Objective}{6}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:baseline_obj}{{4.1}{6}{Baseline Objective}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Formula bite.}{6}{section*.16}\protected@file@percent }
+\citation{logan2011fea}
+\@writefile{toc}{\contentsline {paragraph}{Structural proxy.}{7}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Enhanced Objective: Kinematic Spiral Bite}{7}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:spiral}{{4.2}{7}{Enhanced Objective: Kinematic Spiral Bite}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Physical model.}{7}{section*.18}\protected@file@percent }
+\newlabel{eq:spiral}{{11}{7}{Physical model}{equation.4.11}{}}
+\@writefile{toc}{\contentsline {paragraph}{Contact counting.}{7}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Effective bite depth.}{7}{section*.20}\protected@file@percent }
+\newlabel{eq:bite}{{13}{7}{Effective bite depth}{equation.4.13}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Spiral contact visualisation for an optimised featherweight disk (B-spline profile, 12\,000\,RPM, $v{=}3$\,m/s). Coloured curves are Archimedean spirals initiated from 20 angular offsets; orange dots mark contact events; red arrows are the tangential impact force directions applied as Neumann boundary conditions in the FEA.}}{7}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:spiral}{{11}{7}{Spiral contact visualisation for an optimised featherweight disk (B-spline profile, 12\,000\,RPM, $v{=}3$\,m/s). Coloured curves are Archimedean spirals initiated from 20 angular offsets; orange dots mark contact events; red arrows are the tangential impact force directions applied as Neumann boundary conditions in the FEA}{figure.caption.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}FEA-in-Loop Structural Scoring}{7}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:fea}{{4.3}{7}{FEA-in-Loop Structural Scoring}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Problem formulation.}{7}{section*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Stress metric.}{7}{section*.23}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Computational cost.}{7}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{FEA verification.}{7}{section*.25}\protected@file@percent }
 \citation{storn1997de}
-\newlabel{eq:spiral}{{15}{4}{Physical model}{equation.4.15}{}}
-\@writefile{toc}{\contentsline {paragraph}{Contact counting.}{4}{section*.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Effective bite depth.}{4}{section*.13}\protected@file@percent }
-\newlabel{eq:bite}{{17}{4}{Effective bite depth}{equation.4.17}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}FEA-in-Loop Structural Scoring}{4}{subsection.4.3}\protected@file@percent }
-\newlabel{sec:fea}{{4.3}{4}{FEA-in-Loop Structural Scoring}{subsection.4.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Problem formulation.}{4}{section*.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Stress metric.}{4}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Computational cost.}{4}{section*.16}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Optimisation Framework}{4}{section.5}\protected@file@percent }
-\newlabel{sec:optim}{{5}{4}{Optimisation Framework}{section.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Differential Evolution}{4}{subsection.5.1}\protected@file@percent }
-\newlabel{sec:de}{{5.1}{4}{Differential Evolution}{subsection.5.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Phase 1: Outer Profile}{4}{subsection.5.2}\protected@file@percent }
-\newlabel{sec:phase1}{{5.2}{4}{Phase 1: Outer Profile}{subsection.5.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Phase 2: Polar Superellipse Cutouts}{4}{subsection.5.3}\protected@file@percent }
-\newlabel{sec:phase2}{{5.3}{4}{Phase 2: Polar Superellipse Cutouts}{subsection.5.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Mass normalisation.}{4}{section*.17}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Constraint handling.}{5}{section*.18}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Convergence Visualisation}{5}{subsection.5.4}\protected@file@percent }
-\newlabel{sec:gif}{{5.4}{5}{Convergence Visualisation}{subsection.5.4}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Method Comparison}{5}{section.6}\protected@file@percent }
-\newlabel{sec:results}{{6}{5}{Method Comparison}{section.6}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Convergence curves for the \emph  {featherweight disk} case. Each line is one spline family; $y$-axis is enhanced weighted score (higher is better).}}{5}{figure.caption.19}\protected@file@percent }
-\newlabel{fig:conv_feather}{{2}{5}{Convergence curves for the \emph {featherweight disk} case. Each line is one spline family; $y$-axis is enhanced weighted score (higher is better)}{figure.caption.19}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Convergence grid: per-seed traces for the completed \emph  {featherweight disk} runs (bspline, bezier, catmull\_rom).}}{5}{figure.caption.20}\protected@file@percent }
-\newlabel{fig:conv_grid}{{3}{5}{Convergence grid: per-seed traces for the completed \emph {featherweight disk} runs (bspline, bezier, catmull\_rom)}{figure.caption.20}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Final enhanced scores for completed runs (currently \emph  {featherweight disk}). Error bars reflect per-seed variance.}}{5}{figure.caption.21}\protected@file@percent }
-\newlabel{fig:finalscores}{{4}{5}{Final enhanced scores for completed runs (currently \emph {featherweight disk}). Error bars reflect per-seed variance}{figure.caption.21}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Score heatmap for completed runs; grey cells indicate pending cases. Values $>1$ (warm colours) indicate improvement over the Fourier baseline.}}{5}{figure.caption.22}\protected@file@percent }
-\newlabel{fig:heatmap}{{5}{5}{Score heatmap for completed runs; grey cells indicate pending cases. Values $>1$ (warm colours) indicate improvement over the Fourier baseline}{figure.caption.22}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Enhanced final metrics (\emph  {featherweight disk}, one run per profile).}}{5}{table.caption.23}\protected@file@percent }
-\newlabel{tab:results_feather}{{4}{5}{Enhanced final metrics (\emph {featherweight disk}, one run per profile)}{table.caption.23}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Committed Designs}{5}{section.7}\protected@file@percent }
-\newlabel{sec:committed}{{7}{5}{Committed Designs}{section.7}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Final FEA stress map for the optimised \emph  {featherweight disk} design. The two-panel view shows the weapon polygon (left) and element-wise Von Mises stress (right). Maximum stress occurs at the innermost web between bore and cutout pocket.}}{6}{figure.caption.24}\protected@file@percent }
-\newlabel{fig:fea_feather}{{6}{6}{Final FEA stress map for the optimised \emph {featherweight disk} design. The two-panel view shows the weapon polygon (left) and element-wise Von Mises stress (right). Maximum stress occurs at the innermost web between bore and cutout pocket}{figure.caption.24}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Final FEA stress map for the optimised \emph  {compact bar} design. Bar-style weapons typically show high stress at the hub due to the large overhang moment of the end masses.}}{6}{figure.caption.25}\protected@file@percent }
-\newlabel{fig:fea_bar}{{7}{6}{Final FEA stress map for the optimised \emph {compact bar} design. Bar-style weapons typically show high stress at the hub due to the large overhang moment of the end masses}{figure.caption.25}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Final FEA stress map for the optimised \emph  {beetleweight drum} design.}}{6}{figure.caption.26}\protected@file@percent }
-\newlabel{fig:fea_drum}{{8}{6}{Final FEA stress map for the optimised \emph {beetleweight drum} design}{figure.caption.26}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Final FEA stress map for the optimised \emph  {antweight ring} design. Ring-style weapons distribute mass at the periphery, yielding high moment of inertia but thin cross-sections that are structurally demanding.}}{6}{figure.caption.27}\protected@file@percent }
-\newlabel{fig:fea_ring}{{9}{6}{Final FEA stress map for the optimised \emph {antweight ring} design. Ring-style weapons distribute mass at the periphery, yielding high moment of inertia but thin cross-sections that are structurally demanding}{figure.caption.27}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Discussion}{6}{section.8}\protected@file@percent }
-\newlabel{sec:discussion}{{8}{6}{Discussion}{section.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Profile Family Trade-offs}{6}{subsection.8.1}\protected@file@percent }
-\newlabel{sec:discuss_profiles}{{8.1}{6}{Profile Family Trade-offs}{subsection.8.1}{}}
-\@writefile{toc}{\contentsline {paragraph}{B-spline (C\textsuperscript  {2}) vs.\ B\'ezier (C\textsuperscript  {1}).}{6}{section*.28}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Catmull-Rom interpolation property.}{6}{section*.29}\protected@file@percent }
-\citation{storn1997de}
+\citation{sobol1967}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces FEA verification. \emph  {Left}: von-Mises stress field for a solid steel disk at 8\,000\,RPM (10\,mm mesh spacing); white dashed circles are analytical iso-stress contours. \emph  {Centre}: per-element FEA stresses (blue dots) against the Lam\'{e} radial profile (red line); vertical markers indicate the two test locations. \emph  {Right}: bar chart comparing analytical and FEA values; green annotations show the relative error (1.1\% and 0.7\% respectively).}}{8}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:fea_verify}{{12}{8}{FEA verification. \emph {Left}: von-Mises stress field for a solid steel disk at 8\,000\,RPM (10\,mm mesh spacing); white dashed circles are analytical iso-stress contours. \emph {Centre}: per-element FEA stresses (blue dots) against the Lam\'{e} radial profile (red line); vertical markers indicate the two test locations. \emph {Right}: bar chart comparing analytical and FEA values; green annotations show the relative error (1.1\% and 0.7\% respectively)}{figure.caption.26}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Physical Energy Transfer Objective}{8}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:physical_obj}{{4.4}{8}{Physical Energy Transfer Objective}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Energy transfer model.}{8}{section*.27}\protected@file@percent }
+\newlabel{eq:etransfer}{{18}{8}{Energy transfer model}{equation.4.18}{}}
+\newlabel{eq:eref}{{19}{8}{Energy transfer model}{equation.4.19}{}}
+\@writefile{toc}{\contentsline {paragraph}{Hard constraints.}{8}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Optimisation Framework}{8}{section.5}\protected@file@percent }
+\newlabel{sec:optim}{{5}{8}{Optimisation Framework}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Differential Evolution}{8}{subsection.5.1}\protected@file@percent }
+\newlabel{sec:de}{{5.1}{8}{Differential Evolution}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Phase 1: Outer Profile}{8}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:phase1}{{5.2}{8}{Phase 1: Outer Profile}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Phase 2: Polar Superellipse Cutouts}{8}{subsection.5.3}\protected@file@percent }
+\newlabel{sec:phase2}{{5.3}{8}{Phase 2: Polar Superellipse Cutouts}{subsection.5.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Convergence Visualisation}{8}{subsection.5.4}\protected@file@percent }
+\newlabel{sec:gif}{{5.4}{8}{Convergence Visualisation}{subsection.5.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Surrogate-Assisted Search}{8}{section.6}\protected@file@percent }
+\newlabel{sec:rom}{{6}{8}{Surrogate-Assisted Search}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}FEA Database}{9}{subsection.6.1}\protected@file@percent }
+\newlabel{sec:fea_database}{{6.1}{9}{FEA Database}{subsection.6.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Proper Orthogonal Decomposition}{9}{subsection.6.2}\protected@file@percent }
+\newlabel{sec:pod}{{6.2}{9}{Proper Orthogonal Decomposition}{subsection.6.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Gaussian Process Surrogate}{9}{subsection.6.3}\protected@file@percent }
+\newlabel{sec:gp}{{6.3}{9}{Gaussian Process Surrogate}{subsection.6.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Leave-one-out validation.}{9}{section*.29}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}UCB Active Learning}{9}{subsection.6.4}\protected@file@percent }
+\newlabel{sec:ucb}{{6.4}{9}{UCB Active Learning}{subsection.6.4}{}}
+\newlabel{eq:ucb}{{26}{9}{UCB Active Learning}{equation.6.26}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Experimental Setup}{9}{section.7}\protected@file@percent }
+\newlabel{sec:setup}{{7}{9}{Experimental Setup}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Test Cases}{9}{subsection.7.1}\protected@file@percent }
+\newlabel{sec:cases}{{7.1}{9}{Test Cases}{subsection.7.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Test case specifications. Cases marked $^\ast $ are included in the multi-replicate study (3 replicates each) but not in the profile-family sweep.}}{9}{table.caption.30}\protected@file@percent }
+\newlabel{tab:cases}{{4}{9}{Test case specifications. Cases marked $^\ast $ are included in the multi-replicate study (3 replicates each) but not in the profile-family sweep}{table.caption.30}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Protocol}{9}{subsection.7.2}\protected@file@percent }
+\newlabel{sec:protocol}{{7.2}{9}{Protocol}{subsection.7.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Results}{10}{section.8}\protected@file@percent }
+\newlabel{sec:results}{{8}{10}{Results}{section.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Convergence Curves}{10}{subsection.8.1}\protected@file@percent }
+\newlabel{sec:convresults}{{8.1}{10}{Convergence Curves}{subsection.8.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Convergence curves, \emph  {featherweight disk}. Dashed line: Fourier baseline final score (0.786). B\'{e}zier and Catmull-Rom converge to competitive scores; B-spline lands in a low-SF local optimum.}}{10}{figure.caption.31}\protected@file@percent }
+\newlabel{fig:conv_feather}{{13}{10}{Convergence curves, \emph {featherweight disk}. Dashed line: Fourier baseline final score (0.786). B\'{e}zier and Catmull-Rom converge to competitive scores; B-spline lands in a low-SF local optimum}{figure.caption.31}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Convergence curves, \emph  {compact bar}. All enhanced methods fall below the Fourier baseline, reflecting heavy FEA penalties for bar-style geometries that fail under centrifugal stress.}}{10}{figure.caption.32}\protected@file@percent }
+\newlabel{fig:conv_bar}{{14}{10}{Convergence curves, \emph {compact bar}. All enhanced methods fall below the Fourier baseline, reflecting heavy FEA penalties for bar-style geometries that fail under centrifugal stress}{figure.caption.32}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Convergence curves, \emph  {eggbeater (3-blade)}. Catmull-Rom achieves the highest enhanced score (0.606) and overtakes the Fourier baseline on MOI and stored energy.}}{10}{figure.caption.33}\protected@file@percent }
+\newlabel{fig:conv_egg}{{15}{10}{Convergence curves, \emph {eggbeater (3-blade)}. Catmull-Rom achieves the highest enhanced score (0.606) and overtakes the Fourier baseline on MOI and stored energy}{figure.caption.33}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Quantitative Comparison}{10}{subsection.8.2}\protected@file@percent }
+\newlabel{sec:quant}{{8.2}{10}{Quantitative Comparison}{subsection.8.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Final scores across all cases and methods. Grey bars show the Fourier baseline. Enhanced methods score lower on cases where FEA reveals structural failures in designs that the baseline accepts silently.}}{10}{figure.caption.35}\protected@file@percent }
+\newlabel{fig:finalscores}{{16}{10}{Final scores across all cases and methods. Grey bars show the Fourier baseline. Enhanced methods score lower on cases where FEA reveals structural failures in designs that the baseline accepts silently}{figure.caption.35}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Score heatmap (value relative to Fourier baseline). The eggbeater Catmull-Rom cell (0.606 vs.\ baseline 0.695) appears near-parity; its absolute metrics (MOI, energy) actually \emph  {exceed} the baseline.}}{10}{figure.caption.36}\protected@file@percent }
+\newlabel{fig:heatmap}{{17}{10}{Score heatmap (value relative to Fourier baseline). The eggbeater Catmull-Rom cell (0.606 vs.\ baseline 0.695) appears near-parity; its absolute metrics (MOI, energy) actually \emph {exceed} the baseline}{figure.caption.36}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}ROM Infrastructure Results}{10}{subsection.8.3}\protected@file@percent }
+\newlabel{sec:rom_results}{{8.3}{10}{ROM Infrastructure Results}{subsection.8.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{FEA database.}{10}{section*.37}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{POD decomposition.}{10}{section*.38}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Final metrics for all completed runs. SF = FEA safety factor ($\sigma _{\mathrm  {yield}}/\sigma _{\mathrm  {VM,max}}$); $E$ = stored kinetic energy; $I$ = moment of inertia. Baseline runs do not compute SF (marked ``---''). $\dagger $: B-spline finds structurally failed design (SF $< 1$).}}{11}{table.caption.34}\protected@file@percent }
+\newlabel{tab:results}{{5}{11}{Final metrics for all completed runs. SF = FEA safety factor ($\sigma _{\mathrm {yield}}/\sigma _{\mathrm {VM,max}}$); $E$ = stored kinetic energy; $I$ = moment of inertia. Baseline runs do not compute SF (marked ``---''). $\dagger $: B-spline finds structurally failed design (SF $< 1$)}{table.caption.34}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces POD mode count at different variance thresholds, $N{=}500$, $d{=}8$, $M{=}1173$ reference-mesh elements.}}{11}{table.caption.39}\protected@file@percent }
+\newlabel{tab:rom_modes}{{6}{11}{POD mode count at different variance thresholds, $N{=}500$, $d{=}8$, $M{=}1173$ reference-mesh elements}{table.caption.39}{}}
+\@writefile{toc}{\contentsline {paragraph}{In-sample prediction quality.}{11}{section*.40}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces GP surrogate validation across database/threshold configurations.}}{11}{table.caption.41}\protected@file@percent }
+\newlabel{tab:rom_loo}{{7}{11}{GP surrogate validation across database/threshold configurations}{table.caption.41}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces ROM infrastructure summary. (a)~Cumulative variance explained: 90\% is reached at $k{=}30$ modes; the spectrum becomes numerically flat beyond $k{\approx }63$ (95\% threshold, orange dashed) — modes 64--187 account for variance at machine-precision levels. (b)~LOO residuals: predicted vs.\ true peak stress per design (99\% surrogate). (c)~GP calibration: predicted uncertainty vs.\ true LOO error. (d)~Sample Sobol-generated B-spline designs from the training database.}}{12}{figure.caption.42}\protected@file@percent }
+\newlabel{fig:rom_summary}{{18}{12}{ROM infrastructure summary. (a)~Cumulative variance explained: 90\% is reached at $k{=}30$ modes; the spectrum becomes numerically flat beyond $k{\approx }63$ (95\% threshold, orange dashed) — modes 64--187 account for variance at machine-precision levels. (b)~LOO residuals: predicted vs.\ true peak stress per design (99\% surrogate). (c)~GP calibration: predicted uncertainty vs.\ true LOO error. (d)~Sample Sobol-generated B-spline designs from the training database}{figure.caption.42}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Discussion}{12}{section.9}\protected@file@percent }
+\newlabel{sec:discussion}{{9}{12}{Discussion}{section.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Why Enhanced Scores Differ from the Baseline}{12}{subsection.9.1}\protected@file@percent }
+\newlabel{sec:discuss_scores}{{9.1}{12}{Why Enhanced Scores Differ from the Baseline}{subsection.9.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Eggbeater: Catmull-Rom Outperforms the Baseline in Energy and MOI}{12}{subsection.9.2}\protected@file@percent }
+\newlabel{sec:discuss_egg}{{9.2}{12}{Eggbeater: Catmull-Rom Outperforms the Baseline in Energy and MOI}{subsection.9.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Profile Family Trade-offs}{12}{subsection.9.3}\protected@file@percent }
+\newlabel{sec:discuss_profiles}{{9.3}{12}{Profile Family Trade-offs}{subsection.9.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{B-spline (C\textsuperscript  {2}) vs.\ B\'{e}zier (C\textsuperscript  {1}).}{12}{section*.43}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Catmull-Rom interpolation.}{12}{section*.44}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Baseline Weaknesses Confirmed}{12}{subsection.9.4}\protected@file@percent }
+\newlabel{sec:discuss_baseline}{{9.4}{12}{Baseline Weaknesses Confirmed}{subsection.9.4}{}}
 \bibstyle{plain}
 \bibcite{storn1997de}{1}
 \bibcite{piegl1997nurbs}{2}
 \bibcite{catmullrom1974}{3}
 \bibcite{logan2011fea}{4}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Mass Normalisation Limitation}{7}{subsection.8.2}\protected@file@percent }
-\newlabel{sec:discuss_mass}{{8.2}{7}{Mass Normalisation Limitation}{subsection.8.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}FEA Mesh Convergence}{7}{subsection.8.3}\protected@file@percent }
-\newlabel{sec:discuss_fea}{{8.3}{7}{FEA Mesh Convergence}{subsection.8.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Known Baseline Weaknesses}{7}{subsection.8.4}\protected@file@percent }
-\newlabel{sec:discuss_baseline}{{8.4}{7}{Known Baseline Weaknesses}{subsection.8.4}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusion}{7}{section.9}\protected@file@percent }
-\newlabel{sec:conclusion}{{9}{7}{Conclusion}{section.9}{}}
-\gdef \@abspage@last{7}
+\bibcite{bendsoe2004topology}{5}
+\bibcite{sobol1967}{6}
+\bibcite{rasmussen2006gp}{7}
+\bibcite{berkooz1993pod}{8}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.5}Mass Normalisation and Cutout Limitations}{13}{subsection.9.5}\protected@file@percent }
+\newlabel{sec:discuss_cutout}{{9.5}{13}{Mass Normalisation and Cutout Limitations}{subsection.9.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.6}FEA Mesh Fidelity}{13}{subsection.9.6}\protected@file@percent }
+\newlabel{sec:discuss_fea}{{9.6}{13}{FEA Mesh Fidelity}{subsection.9.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{13}{section.10}\protected@file@percent }
+\newlabel{sec:conclusion}{{10}{13}{Conclusion}{section.10}{}}
+\gdef \@abspage@last{13}

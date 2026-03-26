@@ -29,6 +29,7 @@ so they can be swapped in trivially.
 
 from __future__ import annotations
 
+import math
 import numpy as np
 from shapely.geometry import Polygon, MultiPolygon
 
@@ -40,7 +41,10 @@ from .physics import (
     com_offset_mm,
 )
 from .objectives import impact_zone_score   # reuse — unchanged baseline helper
-from .spiral_contact import analyse_contacts as _spiral_analyse
+from .spiral_contact import (
+    analyse_contacts as _spiral_analyse,
+    contact_forces as _build_contact_forces,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +308,7 @@ def compute_metrics_enhanced(
     poly: Polygon | MultiPolygon,
     cfg: WeaponConfig,
     fea_spacing: float | None = None,
+    return_mesh: bool = False,
 ) -> dict:
     """Compute all objective metrics with FEA-based structural scoring.
 
@@ -314,10 +319,19 @@ def compute_metrics_enhanced(
     fea_spacing=cfg.optimization.fea_fine_spacing_mm for higher-quality
     evaluation at the end of a run.
 
+    Parameters
+    ----------
+    return_mesh : bool
+        When True, also runs fea_stress_analysis_with_mesh and caches the
+        full mesh arrays in the returned dict under the '_fea_nodes',
+        '_fea_elements', '_fea_vm_stresses' keys (prefixed with _ to mark
+        them as internal / non-serialised).  Used by the GIF callback to
+        reuse the FEA solve without a second evaluation.
+
     Returns the same key set as compute_metrics() plus enhanced bite keys
     and always-populated FEA keys.
     """
-    from .fea import fea_stress_analysis
+    from .fea import fea_stress_analysis, fea_stress_analysis_with_mesh
 
     t   = cfg.sheet_thickness_mm
     rho = cfg.material.density_kg_m3
@@ -329,28 +343,143 @@ def compute_metrics_enhanced(
     impact = impact_zone_score(poly)
     mass_util = mass / cfg.weight_budget_kg if cfg.weight_budget_kg > 0 else 0.0
 
-    # Kinematic spiral bite (replaces constant formula and peak-counting heuristic)
-    bite_info = kinematic_spiral_bite(poly, cfg.rpm)
+    # Opponent approach speed — read from config so sweeps / tests can tune it
+    _drive_speed_mps = float(getattr(cfg.optimization, "drive_speed_mps", 6.0))
 
-    # Contact angle quality: |cos(angle between spiral tangent and surface normal)|
-    # Measures how face-on each contact is — high quality → more bite energy transferred
-    # Uses a fast low-resolution scan (8 spirals × 360 angular bins ≈ negligible overhead)
-    caq = contact_angle_quality(poly, cfg.rpm)
+    # Kinematic spiral bite (replaces constant formula and peak-counting heuristic)
+    bite_info = kinematic_spiral_bite(poly, cfg.rpm, drive_speed_mps=_drive_speed_mps)
+
+    # Continuous bite variant (smooth sigmoid engagement instead of discrete crossings)
+    if getattr(cfg.optimization, "use_continuous_bite", False):
+        from .objectives_smooth import continuous_bite_metric
+        try:
+            smooth_bite = continuous_bite_metric(
+                poly,
+                cfg.rpm,
+                sigmoid_beta=getattr(cfg.optimization, "sigmoid_beta", 10.0),
+            )
+            # Override discrete metrics with smooth variants; keep _contacts etc. for FEA loading
+            bite_info = {
+                "bite_mm":      smooth_bite["bite_mm"],
+                "n_contacts":   smooth_bite["n_contacts"],
+                "v_per_rad_mm": smooth_bite["v_per_rad_mm"],
+                "max_bite_mm":  smooth_bite["max_bite_mm"],
+                # Carry engagement through for downstream logging
+                "_engagement":  smooth_bite["engagement"],
+            }
+        except Exception:
+            pass  # Fall through to discrete bite_info already computed above
+
+    # Single spiral analysis pass — used for:
+    #   1. contact_angle_quality  (how face-on each impact is)
+    #   2. FEA contact force loading (bite-force superimposed on centrifugal)
+    #   3. Cached contacts for callback frame rendering (no double-computation)
+    # n_spirals=16, n_eval=720: double the baseline resolution so that surface tangents
+    # (computed by finite difference of the binned profile) are estimated accurately
+    # enough to discriminate face-on from glancing contacts.  Adds ~15 ms per call,
+    # negligible vs FEA cost.
+    try:
+        _contacts, _r_start = _spiral_analyse(
+            poly,
+            n_spirals=16,
+            v_ms=_drive_speed_mps,
+            rpm=cfg.rpm,
+            n_eval=720,
+            n_revolutions=2.0,
+        )
+    except Exception:
+        _contacts, _r_start = [], 0.0
+
+    # Contact angle quality: mean |cos(spiral_tangent · surface_normal)|
+    if _contacts:
+        caq = float(np.mean([c.contact_angle_cos for c in _contacts]))
+    else:
+        caq = 0.5  # neutral fallback
+
+    # Build contact forces for FEA.
+    #
+    # Force magnitude model:
+    #   F_base = contact_force_scale × ½ · m · ω² · r_contact
+    #
+    # The full centripetal force (½·m·ω²·r) represents the internal structural load
+    # trying to tear the weapon apart — this is already captured by the centrifugal
+    # body-load in the FEA solve.  The "contact impulse" from a brief opponent
+    # collision is much smaller: roughly 1–5 kN for lightweight robots, 5–20 kN
+    # for heavyweight.  contact_force_scale (default 0.02) reduces the centripetal
+    # magnitude by ~50× to give a physically plausible impact point load:
+    #
+    #   Featherweight (0.75 kg, 12 000 RPM, r=60 mm):
+    #     F_full ≈ 33 kN  →  F_impact ≈ 660 N  (stress at 10 mm mesh ≈ 20 MPa)
+    #   Heavyweight   (3 kg,  8 000 RPM, r=90 mm):
+    #     F_full ≈ 84 kN  →  F_impact ≈ 1 680 N (stress at 10 mm mesh ≈ 55 MPa)
+    #
+    # Combined with centrifugal loading (~300–400 MPa for typical designs) this keeps
+    # the total FEA stress well within yield for a good design (safety factor ~3–5).
+    #
+    # scale_by_angle=True → face-on contacts apply full F_impact; glancing contacts
+    # apply proportionally less.  This is physically correct: a glancing blow
+    # transfers less impulse to the weapon.  It also means the optimizer must find
+    # designs that achieve face-on contact AND withstand the resulting higher loads.
+    if _contacts:
+        _omega = 2.0 * np.pi * max(cfg.rpm, 1.0) / 60.0
+        _mean_r_m = float(np.mean([c.r_contact for c in _contacts])) * 1e-3  # mm → m
+        _cf_scale = float(getattr(cfg.optimization, "contact_force_scale", 0.02))
+        _f_mag = _cf_scale * 0.5 * mass * _omega ** 2 * _mean_r_m      # N
+        _fea_forces = _build_contact_forces(
+            _contacts, force_magnitude_n=_f_mag, scale_by_angle=True
+        )
+    else:
+        _fea_forces = []
 
     # Supplementary tooth geometry (for logging / FEA frame annotations)
     tooth_info = detect_teeth(poly)
 
-    # FEA structural score in the loop (coarse mesh for speed)
+    # FEA structural score — centrifugal + spiral-impact loading in every eval.
+    # When return_mesh=True we call fea_stress_analysis_with_mesh so the full
+    # mesh arrays are available for GIF frame rendering without a second FEA solve.
     spacing = fea_spacing if fea_spacing is not None else cfg.optimization.fea_coarse_spacing_mm
-    fea = fea_stress_analysis(
-        poly,
+    _contact_load_mode = getattr(cfg.optimization, "contact_load_mode", "neumann_edge")
+    _fea_kw = dict(
         rpm=cfg.rpm,
         density_kg_m3=rho,
         thickness_mm=t,
         yield_strength_mpa=cfg.material.yield_strength_mpa,
         bore_diameter_mm=cfg.mounting.bore_diameter_mm,
         mesh_spacing=spacing,
+        contact_forces=_fea_forces,
+        contact_load_mode=_contact_load_mode,
     )
+
+    _fea_nodes: np.ndarray | None = None
+    _fea_elements: np.ndarray | None = None
+    _fea_vm_stresses: np.ndarray | None = None
+
+    use_ks = getattr(cfg.optimization, "use_ks_stress", False)
+    if return_mesh or use_ks:
+        # Single call to fea_stress_analysis_with_mesh covers both:
+        # • return_mesh=True  → cache arrays for callback GIF rendering
+        # • use_ks_stress=True → need per-element vm_stresses for KS aggregation
+        fea_full = fea_stress_analysis_with_mesh(poly, **_fea_kw)
+        fea = {k: fea_full[k] for k in
+               ("peak_stress_mpa", "mean_stress_mpa", "safety_factor", "fea_score",
+                "n_elements", "n_nodes")}
+        _fea_nodes      = fea_full.get("nodes")
+        _fea_elements   = fea_full.get("elements")
+        _fea_vm_stresses = fea_full.get("vm_stresses")
+        if use_ks and _fea_vm_stresses is not None:
+            from .objectives_smooth import ks_safety_factor, ks_stress_aggregator
+            try:
+                _ks_rho = getattr(cfg.optimization, "ks_rho", 20.0)
+                fea["fea_score"] = ks_safety_factor(
+                    _fea_vm_stresses, cfg.material.yield_strength_mpa, rho=_ks_rho)
+                _ks_val = ks_stress_aggregator(
+                    _fea_vm_stresses, cfg.material.yield_strength_mpa, rho=_ks_rho)
+                fea["fea_safety_factor"] = float(
+                    cfg.material.yield_strength_mpa / max(_ks_val, 1e-6))
+            except Exception:
+                pass
+    else:
+        fea = fea_stress_analysis(poly, **_fea_kw)
 
     return {
         # Standard keys (compatible with baseline weighted_score)
@@ -374,11 +503,20 @@ def compute_metrics_enhanced(
         # Supplementary tooth geometry (detect_teeth, for frame annotations)
         "mean_tooth_height_mm": tooth_info["mean_height_mm"],
         "mean_sharpness":       tooth_info["mean_sharpness"],
-        # FEA keys
+        # FEA summary keys
         "fea_peak_stress_mpa":  fea["peak_stress_mpa"],
-        "fea_safety_factor":    fea["safety_factor"],
+        "fea_safety_factor":    fea.get("fea_safety_factor", fea["safety_factor"]),
         "fea_score":            fea["fea_score"],
         "fea_n_elements":       fea["n_elements"],
+        # Internal / non-serialised keys (prefixed _):
+        # Spiral contact data — reused by optimizer callback to avoid double-compute
+        "_contacts":            _contacts,
+        "_r_start":             _r_start,
+        "_fea_forces":          _fea_forces,
+        # FEA mesh arrays — only populated when return_mesh=True (for GIF callback)
+        "_fea_nodes":           _fea_nodes,
+        "_fea_elements":        _fea_elements,
+        "_fea_vm_stresses":     _fea_vm_stresses,
     }
 
 
@@ -389,49 +527,97 @@ def compute_metrics_enhanced(
 def weighted_score_enhanced(metrics: dict, cfg: WeaponConfig) -> float:
     """Weighted multi-objective score using enhanced metrics.
 
-    Identical structure to baseline weighted_score() but uses:
-    • effective_bite_mm  (geometry-aware) instead of formula bite
+    Uses:
+    • Kinematic spiral bite (geometry-aware) instead of formula constant
     • FEA-based structural_integrity score
+    • Combined impact-energy metric (when use_impact_metric=True)
+    • Exponential eccentricity penalty
+
+    ── Impact energy physics ────────────────────────────────────────────────
+    When use_impact_metric=True, MOI and bite are fused into a single term:
+
+        impact_score = (E_k / E_k_ref) × cos²(θ) × (bite / max_bite)
+
+    where θ is the contact angle (angle between the opponent approach direction
+    and the weapon surface normal at the contact point), and cos(θ) is the
+    `contact_quality` returned by the spiral contact model.
+
+    Physical justification for cos²(θ):
+      • Impact force normal to surface: F_n = F_total · cos(θ)
+      • Kinetic energy transferred ∝ v_normal² = v² · cos²(θ)
+        (only the normal velocity component does work on the target)
+      • Taylor expansion near perpendicular: cos(θ) ≈ 1 − θ²/2,
+        so the energy loss is quadratic in angle deviation (gentle near
+        perpendicular, steep at grazing angles).
+      • Smooth disk: contact_quality ≈ 0.05 → cos²(θ) ≈ 0.0025 (≈ zero)
+      • Good tooth face:  contact_quality ≈ 0.80 → cos²(θ) ≈ 0.64
+
+    The combined score creates a strong incentive to develop geometry that
+    simultaneously maximises MOI (E_k high) AND presents tooth faces that
+    meet the opponent nearly perpendicularly (cos²(θ) ≈ 1).
+    A large smooth disk has high MOI but near-zero impact_score.
+    A small toothed weapon has non-zero impact_score but limited by low MOI.
+    The optimum is a weapon with both mass distributed at large radius AND
+    radial tooth faces — the canonical combat-spinner geometry.
+
+    ── Eccentricity penalty ─────────────────────────────────────────────────
+    Balance uses an exponential decay instead of a linear clamp:
+
+        balance_score = exp(−com_offset / (max_r × τ))   τ = 0.04
+
+    At τ = 0.04 × max_r this provides a non-zero gradient at any offset,
+    so the optimizer always has "easy money" to gain by centering the design.
+    A 2 mm offset on an 80 mm weapon → score ≈ 0.54 (vs 1.0 perfectly centred).
     """
     w     = cfg.optimization.weights
     max_r = cfg.envelope.max_radius_mm
 
-    # MOI score: same normalisation as baseline
-    max_moi  = 0.5 * cfg.weight_budget_kg * (max_r ** 2)
-    moi_score = min(metrics["moi_kg_mm2"] / max(max_moi, 1e-6), 1.0)
-
-    # Bite score: spiral model — monotone, maximise bite depth.
-    # max_bite_mm = v/f (single-tooth theoretical maximum).
-    # Multiplied by contact_quality (|cos contact_angle|) so a large bite with a
-    # face-on contact scores higher than the same bite depth at a glancing angle.
-    # contact_quality ∈ [0, 1]; smooth disks ≈ 0.2–0.4, sharp teeth ≈ 0.7–1.0.
-    max_bite   = max(metrics.get("max_bite_mm", 25.0), 1.0)
+    # Shared quantities needed by both metric modes
+    max_moi          = 0.5 * cfg.weight_budget_kg * (max_r ** 2)
+    moi_score        = min(metrics["moi_kg_mm2"] / max(max_moi, 1e-6), 1.0)
+    max_bite         = max(metrics.get("max_bite_mm", 25.0), 1.0)
     bite_depth_score = min(metrics["bite_mm"] / max_bite, 1.0)
     contact_quality  = float(metrics.get("contact_quality", 0.5))
-    bite_score = bite_depth_score * contact_quality
 
-    # Structural: already FEA-based (in [0, 1])
+    if getattr(cfg.optimization, "use_impact_metric", True):
+        # Combined physical impact-energy metric:
+        #   (E_k / E_k_ref) × cos²(θ_contact) × (bite / max_bite)
+        # Fuses MOI and bite into one term; total weight = w.moment_of_inertia + w.bite
+        impact_weight = w.moment_of_inertia + w.bite
+        impact_score  = moi_score * (contact_quality ** 2) * bite_depth_score
+        moi_contrib   = impact_weight * impact_score
+        bite_contrib  = 0.0   # folded into moi_contrib
+    else:
+        # Legacy: separate MOI and bite terms
+        bite_score  = bite_depth_score * (contact_quality ** 2)
+        moi_contrib = w.moment_of_inertia * moi_score
+        bite_contrib = w.bite * bite_score
+
+    # Structural: FEA-based safety factor score [0, 1]
     struct_score = metrics["structural_integrity"]
 
-    # Mass utilisation: identical to baseline
+    # Mass utilisation
     mu = metrics["mass_utilization"]
     if mu > 1.0:
         mass_score = max(0.0, 1.0 - (mu - 1.0) * 5.0)
     else:
         mass_score = mu
 
-    # Balance: identical to baseline
-    balance_score = max(0.0, 1.0 - metrics["com_offset_mm"] / max(max_r * 0.1, 1.0))
+    # Balance: exponential decay — gradient exists at any eccentricity.
+    # τ = 0.04 × max_r (e.g. 3.2 mm for an 80 mm weapon).
+    # exp(−com / (max_r × 0.04)):  0 mm → 1.00,  2 mm → 0.54,  5 mm → 0.21
+    _tau = max(max_r * 0.04, 1.0)
+    balance_score = math.exp(-metrics["com_offset_mm"] / _tau)
 
-    # Impact zone: identical to baseline
+    # Impact zone (supplementary; broken for smooth disks — low weight intentionally)
     iz_score = metrics.get("impact_zone", 0.0)
 
     total = (
-        w.moment_of_inertia  * moi_score
-        + w.bite             * bite_score
+        moi_contrib
+        + bite_contrib
         + w.structural_integrity * struct_score
-        + w.mass_utilization * mass_score
-        + w.balance          * balance_score
-        + w.impact_zone      * iz_score
+        + w.mass_utilization     * mass_score
+        + w.balance              * balance_score
+        + w.impact_zone          * iz_score
     )
     return total

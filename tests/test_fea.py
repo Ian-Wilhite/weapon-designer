@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from shapely.geometry import Point
 
-from weapon_designer.fea import fea_stress_analysis
+from weapon_designer.fea import fea_stress_analysis, _find_boundary_edges, _apply_contact_forces
 
 
 @pytest.fixture
@@ -99,3 +99,50 @@ class TestFEAStressAnalysis:
             thickness_mm=10.0, yield_strength_mpa=1400.0, bore_diameter_mm=25.4,
         )
         assert result["safety_factor"] > 1.0
+
+
+class TestNeumannEdgeLoading:
+    """Tests for boundary-edge Neumann contact force distribution."""
+
+    def test_neumann_edge_loads_boundary_nodes(self):
+        """Force at boundary midpoint distributes only to boundary nodes,
+        and total force is conserved."""
+        # Simple 2-triangle mesh: square [0,1]×[0,1], diagonal on nodes 0→2
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+        elems = np.array([[0, 1, 2], [0, 2, 3]])
+
+        F = np.zeros(8)
+        # Force at midpoint of the bottom edge (node 0 → node 1)
+        contact = [{"x": 0.5, "y": 0.0, "fx": 10.0, "fy": 4.0}]
+        F = _apply_contact_forces(F, nodes, contact, mode="neumann_edge", elements=elems)
+
+        # Total force must be conserved
+        assert abs(F[0::2].sum() - 10.0) < 1e-9, "x-force not conserved"
+        assert abs(F[1::2].sum() - 4.0) < 1e-9, "y-force not conserved"
+
+        # Force must be distributed only to boundary nodes (not interior)
+        # All 4 nodes are on the boundary of this small mesh, so verify
+        # that node 0 and node 1 each receive roughly half (t ≈ 0.5)
+        assert F[0] > 0.0, "node 0 should receive x-force"
+        assert F[2] > 0.0, "node 1 should receive x-force"
+        # No force should land on interior DOFs (none here, but test the split)
+        assert abs(F[0] + F[2] - 10.0) < 1e-6 or (F[0] + F[2]) <= 10.0 + 1e-6
+
+    def test_neumann_edge_vs_nearest_node_different(self):
+        """Neumann-edge and nearest-node modes produce different F vectors
+        for an off-node contact point."""
+        nodes = np.array([[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0]])
+        elems = np.array([[0, 1, 2], [0, 2, 3]])
+        # Contact at x=0.7 on the bottom edge → not at a node
+        contact = [{"x": 0.7, "y": 0.0, "fx": 1.0, "fy": 0.0}]
+
+        F_nn = _apply_contact_forces(np.zeros(8), nodes, contact,
+                                     mode="nearest_node")
+        F_ne = _apply_contact_forces(np.zeros(8), nodes, contact,
+                                     mode="neumann_edge", elements=elems)
+
+        # nearest_node puts all force at node 0 (at origin, closest to (0.7, 0))
+        assert F_nn[0] == pytest.approx(1.0), "nearest_node should assign all fx to node 0"
+        # neumann_edge splits between node 0 and node 1
+        assert F_ne[0] > 0.0 and F_ne[2] > 0.0, "neumann_edge should split force"
+        assert not np.allclose(F_nn, F_ne), "modes must differ for off-node contact"

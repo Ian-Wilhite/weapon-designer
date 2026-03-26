@@ -82,47 +82,6 @@ def _make_cases() -> dict[str, WeaponConfig]:
                 num_fourier_terms=4, num_cutout_pairs=2,
             ),
         ),
-        "compact_bar": WeaponConfig(
-            material=Material("AR500", 7850, 1400, 50),
-            weapon_style="bar",
-            sheet_thickness_mm=10,
-            # Solid bar 280×55mm ≈ 1.21 kg; budget set to 0.9 kg (~75% fill)
-            weight_budget_kg=0.9,
-            rpm=9000,
-            mounting=Mounting(15.0, 30, 4, 5.0),
-            envelope=Envelope(max_radius_mm=150, max_length_mm=280, max_width_mm=55),
-            optimization=OptimizationParams(
-                weights=OptimizationWeights(0.30, 0.15, 0.20, 0.10, 0.10, 0.15),
-                num_fourier_terms=3, num_cutout_pairs=2,
-            ),
-        ),
-        "eggbeater_3blade": WeaponConfig(
-            material=Material("AR500", 7850, 1400, 50),
-            weapon_style="eggbeater",
-            sheet_thickness_mm=8,
-            # Solid disk at r=130mm ≈ 3.33 kg; budget set to 2.5 kg (~75% fill)
-            weight_budget_kg=2.5,
-            rpm=12000,
-            mounting=Mounting(20.0, 38, 3, 5.5),
-            envelope=Envelope(max_radius_mm=130),
-            optimization=OptimizationParams(
-                weights=OptimizationWeights(0.25, 0.20, 0.20, 0.10, 0.10, 0.15),
-                num_fourier_terms=4, num_cutout_pairs=2,
-            ),
-        ),
-        "heavyweight_disk": WeaponConfig(
-            material=Material("AR500", 7850, 1400, 50),
-            weapon_style="disk",
-            sheet_thickness_mm=12,
-            weight_budget_kg=7.0,
-            rpm=8000,
-            mounting=Mounting(25.4, 60, 6, 8.0),
-            envelope=Envelope(max_radius_mm=180),
-            optimization=OptimizationParams(
-                weights=OptimizationWeights(0.30, 0.15, 0.20, 0.10, 0.10, 0.15),
-                num_fourier_terms=5, num_cutout_pairs=3,
-            ),
-        ),
     }
 
 
@@ -147,10 +106,9 @@ METHOD_STYLES: dict[str, dict] = {
 }
 
 CASE_LABELS = {
-    "featherweight_disk": "Featherweight Disk",
-    "compact_bar":        "Compact Bar",
-    "eggbeater_3blade":   "Eggbeater (3-blade)",
-    "heavyweight_disk":   "Heavyweight Disk",
+    "featherweight_disk":  "Featherweight Disk",
+    "compact_bar":         "Compact Bar",
+    "eggbeater_3blade":    "Eggbeater (3-blade)",
 }
 
 
@@ -172,6 +130,7 @@ class RunResult:
     gif_phase1:    str | None
     gif_phase2:    str | None
     error:         str | None = None
+    dxf_path:      str | None = None
 
 
 def _to_json(r: RunResult) -> dict:
@@ -285,7 +244,9 @@ def run_baseline(
     cutout_bounds  = _get_cutout_bounds(cfg)
     n_profile      = len(profile_bounds)
     cutout_stride  = _cutout_stride(cfg)
-    workers        = max(1, os.cpu_count() or 1)
+    # Cap workers: with small popsize the process-spawn overhead dominates.
+    # Baseline evals are cheap (no FEA), so serialise them entirely.
+    workers        = 1
 
     phase1_history: list[dict] = []
     phase2_history: list[dict] = []
@@ -296,7 +257,7 @@ def run_baseline(
             self.step = 0
             self.t0   = time.time()
 
-        def __call__(self, xk, conv):
+        def __call__(self, xk, convergence=None):
             self.step += 1
             try:
                 C = cfg.optimization.num_cutout_pairs
@@ -340,7 +301,7 @@ def run_baseline(
                 self.step = 0
                 self.t0   = time.time()
 
-            def __call__(self, xk, conv):
+            def __call__(self, xk, convergence=None):
                 self.step += 1
                 try:
                     x_full = np.concatenate([best_profile, xk])
@@ -396,6 +357,9 @@ def run_baseline(
 
     convergence = _normalise_baseline_history(phase1_history, phase2_history)
 
+    from weapon_designer.exporter import export_weapon_dxf
+    _dxf = export_weapon_dxf(weapon, cfg, run_dir, stem=case_name)
+
     return RunResult(
         case_name=case_name, method="fourier_baseline", profile_type="fourier",
         status="success", elapsed_s=round(time.time()-t0, 1),
@@ -404,6 +368,7 @@ def run_baseline(
                        for k, v in metrics.items()},
         convergence=convergence,
         output_dir=str(run_dir), gif_phase1=None, gif_phase2=None,
+        dxf_path=str(_dxf) if _dxf else None,
     )
 
 
@@ -420,6 +385,10 @@ def run_enhanced(
     popsize: int,
     fea_interval: int,
     log_fn,
+    fea_coarse: float = 10.0,
+    fea_fine: float = 4.0,
+    n_bspline: int = 12,
+    patience: int = 15,
 ) -> RunResult:
     from weapon_designer.optimizer_enhanced import optimize_enhanced
 
@@ -427,12 +396,17 @@ def run_enhanced(
     t0 = time.time()
 
     ecfg = copy.deepcopy(cfg)
-    ecfg.optimization.max_iterations   = iterations
-    ecfg.optimization.population_size  = popsize
-    ecfg.optimization.evaluation_mode  = "enhanced"
-    ecfg.optimization.cutout_type      = "superellipse"
-    ecfg.optimization.profile_type     = profile_type
-    ecfg.optimization.fea_interval     = fea_interval
+    ecfg.optimization.max_iterations        = iterations
+    ecfg.optimization.population_size       = popsize
+    ecfg.optimization.evaluation_mode       = "enhanced"
+    ecfg.optimization.cutout_type           = "superellipse"
+    ecfg.optimization.profile_type         = profile_type
+    ecfg.optimization.fea_interval          = fea_interval
+    ecfg.optimization.fea_coarse_spacing_mm = fea_coarse
+    ecfg.optimization.fea_fine_spacing_mm   = fea_fine
+    ecfg.optimization.n_bspline_points      = n_bspline
+    ecfg.optimization.convergence_patience  = patience
+    ecfg.optimization.convergence_min_delta = 0.0005  # tighter threshold for long runs
 
     try:
         result = optimize_enhanced(ecfg, run_dir, verbose=True)
@@ -453,6 +427,7 @@ def run_enhanced(
 
     g1 = str(result["gif_phase1"]) if result["gif_phase1"] else None
     g2 = str(result["gif_phase2"]) if result["gif_phase2"] else None
+    _dxf = result.get("dxf_path")
 
     return RunResult(
         case_name=case_name, method=profile_type, profile_type=profile_type,
@@ -464,6 +439,7 @@ def run_enhanced(
         convergence=convergence,
         output_dir=str(run_dir),
         gif_phase1=g1, gif_phase2=g2,
+        dxf_path=str(_dxf) if _dxf else None,
     )
 
 
@@ -512,7 +488,7 @@ def plot_case_convergence(
         ("bite",  "Bite (mm)",  axes[2], None),
     ]
 
-    p1_boundary: dict[str, int] = {}  # method → last cum_step in P1
+    p1_boundary_ms: dict[str, float] = {}  # method → elapsed_ms at P1 end
 
     for res in results:
         if res.status != "success" or not res.convergence:
@@ -523,25 +499,31 @@ def plot_case_convergence(
         lw    = sty.get("lw", 1.5)
 
         conv = res.convergence
-        steps = [c["cum_step"] for c in conv]
+        # Compute cumulative wall-clock time in ms (elapsed_s resets at phase boundary)
+        p1_total_s = max(
+            (c["elapsed_s"] for c in conv if c["phase"] == "P1"), default=0.0
+        )
+        elapsed_ms = [
+            (c["elapsed_s"] + (p1_total_s if c["phase"] != "P1" else 0.0)) * 1000.0
+            for c in conv
+        ]
 
-        # Track P1/P2 boundary
-        p1_end = max((c["cum_step"] for c in conv if c["phase"] == "P1"), default=None)
-        if p1_end:
-            p1_boundary[res.method] = p1_end
+        # Track P1/P2 boundary for vertical line
+        if p1_total_s > 0 and any(c["phase"] == "P2" for c in conv):
+            p1_boundary_ms[res.method] = p1_total_s * 1000.0
 
         for key, ylabel, ax, _ in metrics_cfg:
             vals = [c[key] for c in conv]
-            ax.plot(steps, vals, color=color, ls=ls, lw=lw, alpha=0.9)
-            ax.set_xlabel("Optimizer step")
+            ax.plot(elapsed_ms, vals, color=color, ls=ls, lw=lw, alpha=0.9)
+            ax.set_xlabel("Wall-clock time (ms)")
             ax.set_ylabel(ylabel)
 
-    # Phase boundary shading on score panel (use median of P1 ends)
-    if p1_boundary:
-        med_p1 = int(np.median(list(p1_boundary.values())))
+    # Phase boundary marker (use median of P1 end times)
+    if p1_boundary_ms:
+        med_p1_ms = float(np.median(list(p1_boundary_ms.values())))
         for _, _, ax, _ in metrics_cfg:
-            ax.axvline(med_p1, color="#999999", ls=":", lw=1.2, alpha=0.7)
-            ax.text(med_p1 + 0.3, ax.get_ylim()[1], "P2→", fontsize=7,
+            ax.axvline(med_p1_ms, color="#999999", ls=":", lw=1.2, alpha=0.7)
+            ax.text(med_p1_ms * 1.01, ax.get_ylim()[1], "P2→", fontsize=7,
                     color="#666666", va="top")
 
     # Legend
@@ -754,10 +736,17 @@ def plot_phase_comparison(
             for res in case_results:
                 if not res.convergence:
                     continue
-                sty   = METHOD_STYLES.get(res.method, {})
-                steps = [c["cum_step"] for c in res.convergence]
-                vals  = [c[key] for c in res.convergence]
-                ax.plot(steps, vals,
+                sty  = METHOD_STYLES.get(res.method, {})
+                conv = res.convergence
+                p1_total_s = max(
+                    (c["elapsed_s"] for c in conv if c["phase"] == "P1"), default=0.0
+                )
+                elapsed_ms = [
+                    (c["elapsed_s"] + (p1_total_s if c["phase"] != "P1" else 0.0)) * 1000.0
+                    for c in conv
+                ]
+                vals = [c[key] for c in conv]
+                ax.plot(elapsed_ms, vals,
                         color=sty["color"], ls=sty["ls"], lw=sty["lw"], alpha=0.9)
 
             if j == 0:
@@ -765,7 +754,7 @@ def plot_phase_comparison(
             else:
                 ax.set_ylabel(ylabel, fontsize=8)
             if i == n_rows - 1:
-                ax.set_xlabel("Optimizer step", fontsize=8)
+                ax.set_xlabel("Wall-clock time (ms)", fontsize=8)
             if i == 0:
                 ax.set_title(ylabel, fontweight="bold", fontsize=9)
 
@@ -899,15 +888,30 @@ def main() -> None:
                         help="Skip optimisation; regenerate charts from saved JSONs")
     parser.add_argument("--no-baseline", action="store_true",
                         help="Skip fourier_baseline runs")
+    parser.add_argument("--fea-coarse", type=float, default=10.0,
+                        help="Coarse FEA mesh spacing in mm used during optimisation (default: 10.0). "
+                             "Smaller = more accurate but slower. 3mm ≈ 8× slower than 10mm.")
+    parser.add_argument("--fea-fine", type=float, default=4.0,
+                        help="Fine FEA mesh spacing in mm for final evaluation frame (default: 4.0).")
+    parser.add_argument("--n-bspline", type=int, default=12,
+                        help="Number of B-spline control points for the outer profile (default: 12). "
+                             "More points → richer shapes, larger search space.")
+    parser.add_argument("--patience", type=int, default=15,
+                        help="Early-stop patience: halt a phase after this many callback steps "
+                             "with no improvement (default: 15). Use a large value to disable.")
     args = parser.parse_args()
 
     # Apply medium preset (overrides explicit flags)
     # popsize=6, n_bspline=8, fea_coarse=18mm → actual_pop ≈ 6×8=48 per gen
     # phase1=12 gens × 48 = 576 FEA calls; phase2=6 gens × ~60 = 360 → ~<3 min
     if args.medium:
-        args.iterations  = 20
-        args.popsize     = 6
+        args.iterations   = 20
+        args.popsize      = 6
         args.fea_interval = 0   # disable GIF frames (saves significant time)
+        args.fea_coarse   = 18.0
+        args.fea_fine     = 9.0
+        args.n_bspline    = 8
+        args.patience     = 8
         if args.phase1_iters == 0:
             args.phase1_iters = 12
         if args.phase2_iters == 0:
@@ -938,6 +942,8 @@ def main() -> None:
     print(f"  Iterations: {args.iterations}  Popsize: {args.popsize}  "
           f"Phase1: {args.phase1_iters or 'auto'}  Phase2: {args.phase2_iters or 'auto'}  "
           f"FEA interval: {args.fea_interval}")
+    print(f"  FEA coarse: {args.fea_coarse}mm  FEA fine: {args.fea_fine}mm  "
+          f"n_bspline: {args.n_bspline}  patience: {args.patience}")
     print(f"  Output:  {output_dir}/\n")
 
     # Load any existing results
@@ -984,14 +990,6 @@ def main() -> None:
             cfg.optimization.population_size = args.popsize
             cfg.optimization.phase1_iters = args.phase1_iters
             cfg.optimization.phase2_iters = args.phase2_iters
-            # Medium preset: tighter FEA mesh and fewer bspline params
-            if args.medium:
-                cfg.optimization.n_bspline_points = 8
-                cfg.optimization.fea_coarse_spacing_mm = 18.0
-                cfg.optimization.fea_fine_spacing_mm = 9.0
-                cfg.optimization.convergence_patience = 8
-                cfg.optimization.convergence_min_delta = 0.003
-
             def _log(msg: str):
                 ts = datetime.now().strftime("%H:%M:%S")
                 print(f"[{ts}] {msg}")
@@ -1008,6 +1006,10 @@ def main() -> None:
                         case_name, cfg, method_info["profile_type"],
                         run_dir, args.iterations, args.popsize,
                         args.fea_interval, _log,
+                        fea_coarse=args.fea_coarse,
+                        fea_fine=args.fea_fine,
+                        n_bspline=args.n_bspline,
+                        patience=args.patience,
                     )
             except Exception as e:
                 print(f"  UNEXPECTED ERROR: {e}")
