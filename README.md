@@ -1,8 +1,8 @@
 # weapon-designer
 
-![Research Poster](poster/poster_linkedin.png)
+![Research Poster](./poster/poster_linkedin.png)
 
-![POD Spiral Modes](docs/figures/pod_spiral_modes_table.png)
+![POD Spiral Modes](./docs/figures/pod_spiral_modes_table.png)
 
 Parametric combat robot spinning weapon profile optimizer.
 
